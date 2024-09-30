@@ -121,6 +121,17 @@ class WPHB_Comments {
 
 		$user_id = get_current_user_id();
 
+        // Check user was comment in room
+        $user_comments = get_comments( array(
+            'user_id' => $user_id,
+            'post_id' => $params['room_id'],
+            'type'    => 'comment',
+        ) );
+
+        if ( ! empty( $user_comments ) ) {
+            return $this->error( esc_html__( 'You have already reviewed this room.', 'wp-hotel-booking' ), 400 );
+        }
+
 		$user       = get_userdata( $user_id );
 		$comment_id = wp_insert_comment( array(
 			'comment_post_ID'      => $params['room_id'],
@@ -158,11 +169,26 @@ class WPHB_Comments {
 			foreach ( $images as $image ) {
 				$img             = preg_replace( '/^data:image\/[a-z]+;base64,/', '', $image['base64'] );
 				$img             = str_replace( ' ', '+', $img );
+				$img             = WPHB_Helpers::sanitize_params_submitted( $img );
 				$decoded         = base64_decode( $img );
-				$filename        = $image['name'];
-				$file_type       = $image['type'];
-				$hashed_filename = md5( $filename . microtime() ) . '_' . $filename;
+				$filename        = sanitize_file_name( $image['name'] );
+				$file_type       = sanitize_mime_type( $image['type'] );
 
+				// Only allow image type
+				$image_types_allow = [ 'image/jpeg', 'image/png', 'image/gif', 'image/webp' ];
+
+				$validate = wp_check_filetype( $filename );
+				if ( ! $validate['type'] ) {
+					continue;
+				} elseif ( ! in_array( $validate['type'], $image_types_allow ) ) {
+                    continue;
+                }
+
+				if ( ! in_array( $file_type, $image_types_allow ) ) {
+                    continue;
+                }
+
+				$hashed_filename = md5( $filename . microtime() ) . '_' . $filename;
 				$upload_file = file_put_contents( $upload_path . $hashed_filename, $decoded );
 
 				if ( $upload_file ) {
@@ -181,6 +207,7 @@ class WPHB_Comments {
 					}
 				}
 			}
+
 			if ( count( $attachment_ids ) ) {
 				update_comment_meta( $comment_id, 'hb_room_review_images', $attachment_ids );
 			}

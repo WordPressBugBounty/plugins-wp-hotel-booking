@@ -12,6 +12,9 @@
 /**
  * Prevent loading this file directly
  */
+
+use WPHB\TemplateHooks\SingleRoomTemplate;
+
 defined( 'ABSPATH' ) || exit();
 
 global $hb_room, $hb_settings;
@@ -30,6 +33,12 @@ $room                   = WPHB_Room::instance( $room_id );
 $average_rating         = round( $room->average_rating(), 2 );
 $count                  = intval( $room->get_review_count() );
 $enable_advanced_review = hb_settings()->get( 'enable_advanced_review' ) === '1';
+// Check user was comment in room
+$user_comments = get_comments( array(
+	'user_id' => get_current_user_id(),
+	'post_id' => $room_id,
+	'type'    => 'comment',
+) );
 ?>
 
 <div id="reviews">
@@ -41,7 +50,7 @@ $enable_advanced_review = hb_settings()->get( 'enable_advanced_review' ) === '1'
             <div class="header">
                 <h2 class="title"><?php esc_html_e( 'Review', 'wp-hotel-booking' ); ?></h2>
 				<?php
-				if ( is_user_logged_in() ) {
+				if ( is_user_logged_in() && empty( $user_comments ) ) {
 					?>
                     <button type="button" id="hb-room-add-new-review">
                         <svg width="24" height="25" viewBox="0 0 24 25" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -73,7 +82,8 @@ $enable_advanced_review = hb_settings()->get( 'enable_advanced_review' ) === '1'
                             </div>
                             <div class="rating">
 								<?php
-								echo wc_get_rating_html( $average_rating );
+								//echo wc_get_rating_html( $average_rating );
+								echo SingleRoomTemplate::instance()->html_rating_info( $average_rating );
 								?>
                             </div>
                         </div>
@@ -184,10 +194,9 @@ $enable_advanced_review = hb_settings()->get( 'enable_advanced_review' ) === '1'
 							<?php
 							$link = $origin_link;
 
-							if ( isset( $_GET['photos_only'] ) ) {
-								$photos_only = $_GET['photos_only'];
-
-								$link = add_query_arg( 'photos_only', $photos_only, $origin_link );
+							$photos_only = WPHB_Helpers::get_param( 'photos_only', '', 'key' );
+							if ( $photos_only === 'yes' ) {
+								$link = esc_url_raw( add_query_arg( 'photos_only', $photos_only, $origin_link ) );
 							}
 							?>
                             <li class="<?php echo $review_sort_by === 'oldest' ? 'active' : ''; ?>">
