@@ -251,7 +251,7 @@ if ( ! class_exists( 'WP_Hotel_Booking_Room_Extension' ) ) {
 					$res->status = 'success';
 					$res->data   = array(
 						'dates_booked' => $dates_checked,
-						'html_extra' => $html_add_to_cart,
+						'html_extra'   => $html_add_to_cart,
 						'room_id'      => $room_id,
 						'qty'          => $qty,
 					);
@@ -277,5 +277,6 @@ if ( ! class_exists( 'WP_Hotel_Booking_Room_Extension' ) ) {
 			return self::$instance;
 		}
 	}
+
 	WP_Hotel_Booking_Room_Extension::instance();
 }

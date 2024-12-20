@@ -2783,7 +2783,7 @@ if (typeof Object.assign !== "function") {
 /******/ 	
 /************************************************************************/
 var __webpack_exports__ = {};
-// This entry need to be wrapped in an IIFE because it need to be isolated against other modules in the chunk.
+// This entry needs to be wrapped in an IIFE because it needs to be isolated against other modules in the chunk.
 (() => {
 /*!*********************************************!*\
   !*** ./assets/js/frontend/hotel-booking.js ***!
@@ -2985,70 +2985,6 @@ __webpack_require__.r(__webpack_exports__);
     }
     return true;
   }
-  let el_stripe_publish;
-  let strip_publish_string = '';
-  function stripeSubmit(form) {
-    const handler = StripeCheckout.configure({
-      key: strip_publish_string,
-      image: 'https://stripe.com/img/documentation/checkout/marketplace.png',
-      locale: 'auto',
-      token(token) {
-        // Use the token to create the charge with a server-side script.
-        // You can access the token ID with `token.id`
-        stripe_payment_process(form, token);
-      }
-    });
-    const first_name = form.find('input[name="first_name"]').val().trim();
-    const last_name = form.find('input[name="last_name"]').val().trim();
-    const email = form.find('input[name="email"]').val().trim();
-    const currency = form.find('input[name="currency"]').val().trim();
-    let price = 0;
-    if (form.find('input[name="pay_all"]').is(':checked')) {
-      price = form.find('input[name="total_price"]').val();
-    } else {
-      price = form.find('input[name="total_advance"]').val();
-    }
-
-    // Open Checkout with further options
-    handler.open({
-      name: first_name + ' ' + last_name,
-      description: email,
-      currency,
-      amount: price * 100
-    });
-  }
-  function stripe_payment_process(form, token) {
-    const data = {};
-    const payment_data = form.serializeArray();
-    const button = form.find('button[type="submit"]');
-    const old_text = button.html();
-    $.each(payment_data, function (index, obj) {
-      data[obj.name] = obj.value;
-    });
-    $.extend(token, data);
-    $.ajax({
-      url: hotel_settings.ajax,
-      data: token,
-      type: 'POST',
-      dataType: 'html',
-      beforeSend() {
-        button.attr('disabled', 'disabled');
-        button.html('<span class="lds-ring"><span></span><span></span><span></span><span></span></span>' + button.html());
-      }
-    }).done(function (res) {
-      button.html(old_text);
-      res = parseJSON(res);
-      if (typeof res.result !== 'undefined' && res.result == 'success') {
-        if (typeof res.redirect !== 'undefined') {
-          window.location.href = res.redirect;
-        }
-      } else if (typeof res.message !== 'undefined') {
-        alert(res.message);
-      }
-    }).fail(function () {
-      button.html(old_text);
-    });
-  }
   function orderSubmit(form) {
     const action = window.location.href.replace(/\?.*/, '');
     form.attr('action', action);
@@ -3210,27 +3146,46 @@ __webpack_require__.r(__webpack_exports__);
         }
       }
       const cart_table = $('#hotel-booking-payment, #hotel-booking-cart');
-      for (var i = 0; i < cart_table.length; i++) {
-        const _table = $(cart_table[i]);
-        const tr = _table.find('table').find('.hb_checkout_item, .hb_addition_services_title');
-        for (var y = 0; y < tr.length; y++) {
-          const _tr = $(tr[y]);
-          cart_item_id = _tr.attr('data-cart-id'), parent_item_id = _tr.attr('data-parent-id');
-          if (cart_id === cart_item_id || cart_id === parent_item_id) {
-            _tr.remove();
-            continue;
-          }
-        }
+      if (cart_table.length > 0) {
+        $(`tr[data-cart-id="${cart_id}"]`).remove();
+        $(`tr[data-parent-id="${cart_id}"]`).remove();
         if (typeof res.sub_total !== 'undefined') {
-          _table.find('span.hb_sub_total_value').html(res.sub_total);
+          cart_table.find('span.hb_sub_total_value').html(res.sub_total);
         }
         if (typeof res.grand_total !== 'undefined') {
-          _table.find('span.hb_grand_total_value').html(res.grand_total);
+          cart_table.find('span.hb_grand_total_value').html(res.grand_total);
         }
         if (typeof res.advance_payment !== 'undefined') {
-          _table.find('span.hb_advance_payment_value').html(res.advance_payment);
+          cart_table.find('span.hb_advance_payment_value').html(res.advance_payment);
+        }
+        // if cart is empty. reload page
+        if ($('tr.hb_checkout_item').length === 0) {
+          window.location.href = window.location.href;
         }
       }
+      /*
+      for ( var i = 0; i < cart_table.length; i++ ) {
+      	const _table = $( cart_table[ i ] );
+      	const tr = _table.find( 'table' ).find( '.hb_checkout_item, .hb_addition_services_title' );
+      	for ( var y = 0; y < tr.length; y++ ) {
+      		const _tr = $( tr[ y ] );
+      		cart_item_id = _tr.attr( 'data-cart-id' ),
+      		parent_item_id = _tr.attr( 'data-parent-id' );
+      		if ( cart_id === cart_item_id || cart_id === parent_item_id ) {
+      			_tr.remove();
+      			continue;
+      		}
+      	}
+      		if ( typeof res.sub_total !== 'undefined' ) {
+      		_table.find( 'span.hb_sub_total_value' ).html( res.sub_total );
+      	}
+      		if ( typeof res.grand_total !== 'undefined' ) {
+      		_table.find( 'span.hb_grand_total_value' ).html( res.grand_total );
+      	}
+      		if ( typeof res.advance_payment !== 'undefined' ) {
+      		_table.find( 'span.hb_advance_payment_value' ).html( res.advance_payment );
+      	}
+      }*/
     },
     /*add_to_cart: function () {
     	var searchResult = $('form.hb-search-room-results');
@@ -3403,11 +3358,6 @@ __webpack_require__.r(__webpack_exports__);
     }
   };
   $(document).ready(function () {
-    el_stripe_publish = $('input[name=htb_stripe_publish]');
-    if (el_stripe_publish.length) {
-      strip_publish_string = el_stripe_publish.val();
-      el_stripe_publish.val('');
-    }
     HB_Booking_Cart.init();
     $.datepicker.setDefaults({
       dateFormat: hotel_booking_i18n.date_time_format
@@ -3589,11 +3539,7 @@ __webpack_require__.r(__webpack_exports__);
         if (!validateOrder(_self)) {
           return false;
         }
-        if (_method === 'stripe') {
-          stripeSubmit(_self);
-        } else {
-          orderSubmit(_self);
-        }
+        orderSubmit(_self);
       } catch (e) {
         alert(e);
       }
@@ -3802,6 +3748,9 @@ const wphbDatePicker = () => {
         dateFormat: 'Y/m/d',
         minDate: 'today',
         disableMobile: true,
+        locale: {
+          firstDayOfWeek: 1
+        },
         //defaultDate: 'today',
         onChange(selectedDates, dateStr, instance) {
           if (datePickerCheckOut) {
@@ -3823,6 +3772,9 @@ const wphbDatePicker = () => {
         dateFormat: 'Y/m/d',
         minDate: 'today',
         disableMobile: true,
+        locale: {
+          firstDayOfWeek: 1
+        },
         //defaultDate: dateTomorrow,
         onChange(selectedDates, dateStr, instance) {}
       };
@@ -3836,6 +3788,9 @@ const wphbDatePicker = () => {
         disableMobile: true,
         mode: 'range',
         showMonths: 2,
+        locale: {
+          firstDayOfWeek: 1
+        },
         defaultDate: [elDateCheckIn.value, elDateCheckOut.value],
         onClose(selectedDates, dateStr, instance) {
           const dateCheckInSelected = selectedDates[0];

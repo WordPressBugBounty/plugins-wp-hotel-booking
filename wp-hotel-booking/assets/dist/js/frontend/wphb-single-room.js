@@ -2804,7 +2804,7 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_RESULT__;!function(t,o)
 /******/ 	
 /************************************************************************/
 var __webpack_exports__ = {};
-// This entry need to be wrapped in an IIFE because it need to be in strict mode.
+// This entry needs to be wrapped in an IIFE because it needs to be in strict mode.
 (() => {
 "use strict";
 /*!************************************************!*\
@@ -2887,6 +2887,9 @@ const wphbRoomInitDatePicker = () => {
     disable: datesBlock,
     //defaultDate: dateMinCheckInCanBook,
     disableMobile: true,
+    locale: {
+      firstDayOfWeek: 1
+    },
     onChange(selectedDates, dateStr, instance) {
       if (datePickerCheckOut) {
         // calculate next day available
@@ -2908,6 +2911,9 @@ const wphbRoomInitDatePicker = () => {
     disable: datesBlock,
     //defaultDate: dateMinCheckOutCanBook,
     disableMobile: true,
+    locale: {
+      firstDayOfWeek: 1
+    },
     onChange(selectedDates, dateStr, instance) {}
   };
   datePickerCheckOut = (0,flatpickr__WEBPACK_IMPORTED_MODULE_0__["default"])(elDateCheckOut, optionCheckout);
