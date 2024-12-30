@@ -330,13 +330,14 @@ const bookingRoomsPages = formsCheck => {
       });
       const {
         status,
-        redirect,
+        data,
         message
       } = response;
       btn.classList.remove('wphb_loading');
       if ('error' === status) {
         throw new Error(message);
       }
+      const redirect = data?.redirect || '';
       if ('success' === status && redirect) {
         window.location.href = redirect;
       }

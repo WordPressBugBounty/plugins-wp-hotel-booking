@@ -5,7 +5,7 @@ Tags: hotel, booking, hotel booking, reservation, reservations
 Requires at least: 6.0
 Requires PHP: 7.4
 Tested up to: 6.7.1
-Stable tag: 2.1.5
+Stable tag: 2.1.6
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -74,6 +74,10 @@ Yes.
 7. System settings
 
 == Changelog ==
+
+= 2.1.6 (2024-12-30) =
+~ Fixed: security.
+~ Fixed: wrong day of date range picker.
 
 = 2.1.5 (2024-12-20) =
 ~ Added: feature show "option extra", when select room form list search room.
