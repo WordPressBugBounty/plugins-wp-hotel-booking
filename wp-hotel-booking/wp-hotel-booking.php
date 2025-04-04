@@ -4,7 +4,7 @@
  * Plugin URI: http://thimpress.com/
  * Description: Full of professional features for a booking room system
  * Author: ThimPress
- * Version: 2.1.7
+ * Version: 2.1.8
  * Author URI: http://thimpress.com
  * Text Domain: wp-hotel-booking
  * Domain Path: /languages/
@@ -13,6 +13,7 @@
  */
 
 use WPHB\TemplateHooks\CheckRoomsTemplate;
+use WPHB\TemplateHooks\ArchiveRoomTemplate;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -211,6 +212,7 @@ class WP_Hotel_Booking {
 		}
 
 		CheckRoomsTemplate::instance()->init();
+		ArchiveRoomTemplate::instance()->init();
 	}
 
 
@@ -416,6 +418,7 @@ class WP_Hotel_Booking {
 		wp_register_style( 'wp-admin-review-image', $this->plugin_url( "assets/css/admin/review-image{$min}.css" ), [], $v_rand );
 		wp_register_style( 'wp-admin-hotel-booking-fullcalendar', $this->plugin_url( 'assets/css/fullcalendar.min.css' ) );
 		wp_register_style( 'wp-hotel-booking', $this->plugin_url( 'assets/css/hotel-booking.css' ), [], WPHB_VERSION );
+		wp_register_style( 'wp-hotel-booking-theme-default', $this->plugin_url( 'assets/css/theme-default.css' ), [], WPHB_VERSION );
 		wp_register_style( 'wp-admin-hotel-booking-calendar-v2', $this->plugin_url( 'assets/css/admin/main.min.css' ) );
 		wp_register_style( 'tingle-css', $this->plugin_url( 'assets/lib/tingle.css' ) );
 		wp_register_style( 'flatpickr-css', $this->plugin_url( 'assets/lib/flatpickr.min.css' ) );
@@ -510,12 +513,11 @@ class WP_Hotel_Booking {
 		wp_localize_script( 'wp-hotel-booking', 'hotel_booking_i18n', hb_i18n() );
 
 		// rooms slider widget
-		// rooms slider widget
-		wp_register_script( 'wp-hotel-booking-gallery', $this->plugin_url( 'includes/libraries/camera/js/gallery.min.js' ), $dependencies );
+		wp_register_script( 'wp-hotel-booking-gallery', $this->plugin_url( 'includes/libraries/camera/js/gallery.min.js' ), $dependencies ); // old camera
+		wp_register_script( 'flexslider', $this->plugin_url( 'includes/libraries/flexslider/jquery.flexslider.min.js' ), $dependencies, WPHB_VERSION ); // new flexslider
 
 		// owl carousel
 		wp_register_script( 'wp-hotel-booking-owl-carousel', $this->plugin_url( 'includes/libraries/owl-carousel/owl.carousel.min.js' ), $dependencies );
-		// End Register scripts and styles
 
 		// calendar v2 : move addon to single rooms
 		wp_register_script( 'wp-admin-hotel-booking-calendar-v2', $this->plugin_url( 'assets/js/admin/main.min.js' ), $dependencies );
@@ -553,6 +555,7 @@ class WP_Hotel_Booking {
 		} else {
 			wp_enqueue_style( 'wphb-ui-slider' );
 			wp_enqueue_style( 'wp-hotel-booking' );
+			wp_enqueue_style( 'wp-hotel-booking-theme-default' );
 			wp_enqueue_style( 'wp-hotel-booking-review-gallery' );
 
 			wp_enqueue_script( 'wp-hotel-booking' );
@@ -568,6 +571,7 @@ class WP_Hotel_Booking {
 				wp_enqueue_style( 'wphb-single-room-css' );
 				wp_enqueue_script( 'wpdb-single-room-js' );
 				wp_enqueue_script( 'wp-hotel-booking-gallery' );
+				wp_enqueue_script( 'flexslider' );
 
 				global $post;
 
@@ -613,8 +617,8 @@ class WP_Hotel_Booking {
 		// select2
 		wp_enqueue_script( 'wp-admin-hotel-booking-select2' );
 		// wp_enqueue_script( 'colorpicker' );
-		/* calendar v2 */
 
+		/* calendar v2 */
 		wp_enqueue_script( 'wp-admin-hotel-booking-calendar-v2' );
 		wp_enqueue_style( 'wp-admin-hotel-booking-calendar-v2' );
 		wp_enqueue_script( 'wp-admin-hotel-booking-v2' );
