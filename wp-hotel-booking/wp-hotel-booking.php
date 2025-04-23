@@ -4,7 +4,7 @@
  * Plugin URI: http://thimpress.com/
  * Description: Full of professional features for a booking room system
  * Author: ThimPress
- * Version: 2.1.9
+ * Version: 2.2.0
  * Author URI: http://thimpress.com
  * Text Domain: wp-hotel-booking
  * Domain Path: /languages/
@@ -97,6 +97,18 @@ class WP_Hotel_Booking {
 		add_filter( 'wpmu_drop_tables', array( $this, 'delete_blog_table' ) );
 
 		add_action( 'admin_init', array( $this, 'deactivate_plugins_old' ) );
+
+		/**
+		 * Load Widgets support Elementor
+		 *
+		 * This hook has from THIM_EKIT_VERSION 1.3.1
+		 */
+		add_action(
+			'thim_ekit/modules/handle',
+			function () {
+				$this->_include( '/includes/elementor/modules/class-init.php' );
+			}
+		);
 	}
 
 	public function init() {
@@ -106,6 +118,13 @@ class WP_Hotel_Booking {
 		$this->cart = WPHB_Cart::instance();
 		// user
 		$this->user = hb_get_current_user();
+
+		// Check Elementor, Thim El Kit is active.
+		if ( class_exists( 'Thim_EL_Kit' ) && defined( 'ELEMENTOR_VERSION' )
+			&& version_compare( THIM_EKIT_VERSION, '1.3.0', '<=' ) ) {
+			// Load Widgets support Elementor
+			$this->_include( '/includes/elementor/modules/class-init.php' );
+		}
 	}
 
 	// public function create_tables() {
@@ -176,7 +195,7 @@ class WP_Hotel_Booking {
 			extract( $args );
 		}
 
-		if ( file_exists( $file ) ) {
+		if ( realpath( $file ) && file_exists( $file ) ) {
 			if ( $unique ) {
 				require_once $file;
 			} else {
@@ -289,17 +308,6 @@ class WP_Hotel_Booking {
 
 		//template-hook
 		$this->_include( 'includes/template-hooks/class-wphb-search.php' );
-
-		// Load Widgets support Elementor
-		add_action(
-			'plugins_loaded',
-			function () {
-				// Check Elementor, Thim El Kit is active.
-				if ( class_exists( 'Thim_EL_Kit' ) && defined( 'ELEMENTOR_VERSION' ) ) {
-					$this->_include( '/includes/elementor/modules/class-init.php' );
-				}
-			}
-		);
 	}
 
 

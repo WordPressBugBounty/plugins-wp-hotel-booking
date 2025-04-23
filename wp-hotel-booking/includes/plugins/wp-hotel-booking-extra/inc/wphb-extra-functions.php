@@ -70,7 +70,7 @@ if ( ! function_exists( 'tp_hb_extra_get_template_part' ) ) {
 			load_template( $template, false );
 		}
 
-		return $template;
+		return realpath( $template );
 	}
 }
 
@@ -102,7 +102,7 @@ if ( ! function_exists( 'tp_hb_extra_get_template' ) ) {
 
 		do_action( 'hb_extra_before_template_part', $template_name, $template_path, $located, $args );
 
-		include $located;
+		include realpath( $located );
 
 		do_action( 'hb_extra_after_template_part', $template_name, $template_path, $located, $args );
 	}

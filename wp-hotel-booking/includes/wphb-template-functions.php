@@ -47,6 +47,7 @@ if ( ! function_exists( 'hb_get_template_part' ) ) {
 		if ( ! $template ) {
 			$template = locate_template( array( "{$slug}.php", hb_template_path() . "{$slug}.php" ) );
 		}
+		$template = realpath( $template );
 
 		// Allow 3rd party plugin filter template file from their plugin
 		if ( $template ) {
@@ -89,7 +90,7 @@ if ( ! function_exists( 'hb_get_template' ) ) {
 
 		do_action( 'hb_before_template_part', $template_name, $template_path, $located, $args );
 
-		if ( $located && file_exists( $located ) ) {
+		if ( $located && realpath( $located ) && file_exists( $located ) ) {
 			include $located;
 		}
 
@@ -102,15 +103,15 @@ function wphb_get_template_no_override( $template_name, array $args = [] ) {
 		if ( ! empty( $args ) ) {
 			extract( $args );
 		}
-
 		$default_path = WPHB_PLUGIN_PATH . '/templates/';
-		$file         = $default_path . $template_name;
-
-		if ( ! file_exists( $file ) ) {
+		// Strips directory traversal attempts
+		$file = realpath( $default_path . $template_name );
+		// Verify the file is within the intended directory
+		if ( ( strpos( $file, realpath( $default_path ) ) === 0 ) && file_exists( $file ) ) {
+			include $file;
+		} else {
 			throw new Exception( sprintf( '<code>%s</code> does not exist.', $file ) );
 		}
-
-		include $file;
 	} catch ( Exception $e ) {
 		echo $e->getMessage();
 	}
