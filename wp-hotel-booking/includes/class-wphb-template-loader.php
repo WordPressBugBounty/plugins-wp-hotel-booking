@@ -75,7 +75,7 @@ if ( ! class_exists( 'WPHB_TemplateLoader' ) ) {
 				$hb_template = untrailingslashit( WPHB_PLUGIN_PATH ) . '/templates/' . $file;
 				$template    = locate_template( array_unique( $find ) );
 
-				if ( ! $template && file_exists( $hb_template ) ) {
+				if ( ! $template && file_exists( $hb_template ) && realpath( $template ) ) {
 					$template = $hb_template;
 				}
 			}
