@@ -4244,10 +4244,12 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _advanced_review__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./advanced-review */ "./assets/js/admin/room-review/advanced-review.js");
 
 
-addEventListener("DOMContentLoaded", event => {
-  (0,_images__WEBPACK_IMPORTED_MODULE_0__["default"])();
-  (0,_advanced_review__WEBPACK_IMPORTED_MODULE_1__["default"])();
+
+addEventListener("DOMContentLoaded", (event) => {
+    (0,_images__WEBPACK_IMPORTED_MODULE_0__["default"])();
+    (0,_advanced_review__WEBPACK_IMPORTED_MODULE_1__["default"])();
 });
+
 })();
 
 /******/ })()

@@ -2791,6 +2791,7 @@ var __webpack_exports__ = {};
 __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var flatpickr__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! flatpickr */ "./node_modules/flatpickr/dist/esm/index.js");
 
+//import 'flatpickr/dist/flatpickr.min.css';
 (function ($) {
   const $doc = $(document);
   if (Date.prototype.compareWith == undefined) {

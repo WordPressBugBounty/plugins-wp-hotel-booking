@@ -210,6 +210,8 @@ if ( ! class_exists( 'WP_Hotel_Booking_Room_Extension' ) ) {
 				$room_id            = WPHB_Helpers::get_param( 'room-id', '', 'int' );
 				$check_in_date_str  = WPHB_Helpers::get_param( 'check_in_date' );
 				$check_out_date_str = WPHB_Helpers::get_param( 'check_out_date' );
+				$adult_qty          = WPHB_Helpers::get_param( 'adult_qty', 1, 'int' );
+				$child_qty          = WPHB_Helpers::get_param( 'child_qty', 0, 'int' );
 
 				if ( ! wp_verify_nonce( $nonce, 'hb_booking_nonce_action' ) || empty( $room_id ) ) {
 					throw new Exception( __( 'Invalid request', 'wp-hotel-booking' ) );
@@ -219,9 +221,22 @@ if ( ! class_exists( 'WP_Hotel_Booking_Room_Extension' ) ) {
 					throw new Exception( __( 'Check in date and check out date is required.', 'wp-hotel-booking' ) );
 				}
 
+				if ( empty( $adult_qty ) ) {
+					throw new Exception( __( 'Adult quantity is required.', 'wp-hotel-booking' ) );
+				}
+
 				$room = get_post( $room_id );
 				if ( ! $room || $room->post_type !== WPHB_ROOM_CT ) {
 					throw new Exception( __( 'Room not found', 'wp-hotel-booking' ) );
+				}
+				$room_max_adult = (int) get_post_meta( $room_id, '_hb_room_capacity_adult', true );
+				$room_max_adult = $room_max_adult > 0 ? $room_max_adult : 1;
+				$room_max_child = (int) get_post_meta( $room_id, '_hb_max_child_per_room', true );
+				if ( $adult_qty > $room_max_adult ) {
+					throw new Exception( sprintf( __( 'The maximum number of adults allowed per room is %s', 'wp-hotel-booking' ), $room_max_adult ) );
+				}
+				if ( $child_qty > $room_max_child ) {
+					throw new Exception( sprintf( __( 'The maximum number of children allowed per room is %s', 'wp-hotel-booking' ), $room_max_child ) );
 				}
 
 				// valid request and require field
@@ -247,10 +262,30 @@ if ( ! class_exists( 'WP_Hotel_Booking_Room_Extension' ) ) {
 				$html_add_to_cart = ob_get_clean();
 
 				if ( $qty && ! is_wp_error( $qty ) ) {
+					$room_product   = WPHB_Room::instance(
+						$room_id,
+						array(
+							'check_in_date'  => $check_in_date->format(),
+							'check_out_date' => $check_out_date->format(),
+							'quantity'       => 1,
+						)
+					);
+					$expected_price = $room_product->get_total( $room_product->get_data( 'check_in_date' ), $room_product->get_data( 'check_out_date' ), $room_product->get_data( 'quantity' ), false );
+					$night          = hb_count_nights_two_dates( $room_product->get_data( 'check_out_date' ), $room_product->get_data( 'check_in_date' ) );
+					$price_html     = '<br>' . __( 'Total: ', 'wp-hotel-booking' ) . hb_format_price( $expected_price );
+					$night_html     = __( 'Night: ', 'wp-hotel-booking' ) . $night;
+					$adult          = __( 'Adult: ', 'wp-hotel-booking' ) . $adult_qty;
+					$child          = __( 'Child: ', 'wp-hotel-booking' ) . $child_qty;
 					// room has been found
 					$res->status = 'success';
 					$res->data   = array(
-						'dates_booked' => $dates_checked,
+						'dates_booked' => sprintf(
+							'<div>%1$s</div><div>%2$s</div> %3$s %4$s',
+							$dates_checked,
+							$night_html,
+							"$adult, $child",
+							$price_html
+						),
 						'html_extra'   => $html_add_to_cart,
 						'room_id'      => $room_id,
 						'qty'          => $qty,

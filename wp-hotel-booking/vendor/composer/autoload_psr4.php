@@ -7,5 +7,4 @@ $baseDir = dirname($vendorDir);
 
 return array(
     'WPHB\\' => array($baseDir . '/includes'),
-    'PHPCSStandards\\Composer\\Plugin\\Installers\\PHPCodeSniffer\\' => array($vendorDir . '/dealerdirect/phpcodesniffer-composer-installer/src'),
 );
