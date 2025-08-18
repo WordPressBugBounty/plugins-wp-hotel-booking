@@ -182,7 +182,7 @@
       const titleNode = reviewFormPopup.querySelector('#review-title');
       let rating = '';
       if (ratingNode) {
-        rating = ratingNode.value;
+        rating = parseInt(ratingNode.value);
       }
       const content = contentNode.value;
       const title = titleNode.value;
