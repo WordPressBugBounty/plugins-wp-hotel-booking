@@ -67,20 +67,26 @@ if ( ! class_exists( 'WPHB_Post_Types' ) ) {
 
 			// update sortable columns
 			add_filter( 'manage_edit-hb_booking_sortable_columns', array( $this, 'sortable_columns' ) );
+			// custom permalink when have checkin/checkout date
+			add_filter( 'post_type_link', array( $this, 'custom_room_url' ), 10, 2 );
 		}
 
 		// filter for rooms defaut archive page
 		public function filter_sort_rooms( $query ) {
-			if (is_admin() || !$query->is_main_query()) {
+			if ( is_admin() || ! $query->is_main_query() ) {
 				return;
 			}
 
-			if ($query->is_post_type_archive('hb_room') || $query->is_tax('hb_room_type')) {
-				$query_args = hb_get_room_query_args();
+			if ( $query->is_post_type_archive( 'hb_room' ) || $query->is_tax( 'hb_room_type' ) ) {
+				$query->set( 'posts_per_page', 1 );
+				// $query->set( 'post_type', 'page' );
 
-				foreach ( $query_args as $key => $value ) {
-					$query->set( $key, $value );
-				}
+				// $query->set( 'suppress_filters', true );
+				// $query_args = hb_get_room_query_args();
+
+				// foreach ( $query_args as $key => $value ) {
+				// 	$query->set( $key, $value );
+				// }
 			}
 		}
 
@@ -217,7 +223,14 @@ if ( ! class_exists( 'WPHB_Post_Types' ) ) {
 		 */
 		public function posts_join_paged( $join ) {
 			global $wpdb;
-			$result = $wpdb->get_col( "SELECT order_item_id FROM {$wpdb->prefix}hotel_booking_order_items WHERE `order_item_id` IS NOT NULL" );
+			$table_name   = $wpdb->prefix . 'hotel_booking_order_items';
+			$table_exists = $wpdb->get_var( "SHOW TABLES LIKE '{$table_name}'" ) === $table_name;
+			
+			if ( ! $table_exists ) {
+				return $join;
+			}
+
+			$result = $wpdb->get_col( "SELECT order_item_id FROM $table_name WHERE `order_item_id` IS NOT NULL" );
 			if ( ! $this->is_search( 'booking' ) || ! $result ) {
 				return $join;
 			}
@@ -407,8 +420,9 @@ if ( ! class_exists( 'WPHB_Post_Types' ) ) {
 		 */
 		public function custom_room_columns( $a ) {
 			$a['room_type']           = __( 'Room Type', 'wp-hotel-booking' );
-			$a['room_capacity']       = __( 'Max Children', 'wp-hotel-booking' );
+			$a['room_capacity']       = __( 'Room Capacity', 'wp-hotel-booking' );
 			$a['room_price_plan']     = __( 'Price', 'wp-hotel-booking' );
+			$a['number_of_rooms']     = __( 'Number of Rooms', 'wp-hotel-booking' );
 			$a['room_average_rating'] = __( 'Average Rating', 'wp-hotel-booking' );
 
 			// move comments to the last of list
@@ -428,6 +442,7 @@ if ( ! class_exists( 'WPHB_Post_Types' ) ) {
 		 */
 		public function custom_room_columns_filter( $column ) {
 			global $post;
+			$room = WPHB_Room::instance( $post->ID );
 			switch ( $column ) {
 				case 'room_type':
 					$terms = wp_get_post_terms( $post->ID, 'hb_room_type' );
@@ -445,13 +460,17 @@ if ( ! class_exists( 'WPHB_Post_Types' ) ) {
 					// }
 					break;
 				case 'room_capacity':
-					echo esc_html( get_post_meta( $post->ID, '_hb_max_child_per_room', true ) );
+					echo sprintf( '<p>%1$s %2$d</p><p>%3$s %4$d</p>',
+						__( 'Adults:', 'wp-hotel-booking' ),
+						get_post_meta( $post->ID, '_hb_room_capacity_adult', true ) ?: 1,
+						__( 'Children:', 'wp-hotel-booking' ),
+						get_post_meta( $post->ID, '_hb_max_child_per_room', true ) ?: 0
+					);
 					break;
 				case 'room_price_plan':
 					echo '<a href="' . esc_url( admin_url( 'post.php?post=' . $post->ID . '&action=edit&tab=price_room_data' ) ) . '" target="_blank">' . esc_html__( 'View Price', 'wp-hotel-booking' ) . '</a>';
 					break;
 				case 'room_average_rating':
-					$room   = WPHB_Room::instance( $post->ID );
 					$rating = $room->average_rating();
 					$html   = array();
 					$html[] = '<div class="rating">';
@@ -462,6 +481,22 @@ if ( ! class_exists( 'WPHB_Post_Types' ) ) {
 					endif;
 					$html[] = '</div>';
 					echo implode( '', $html );
+					break;
+				case 'number_of_rooms':
+					$minium_booking_night = WPHB_Settings::instance()->get( 'minimum_booking_day', 1 );
+					$available_qty = hotel_booking_get_room_available(
+						$post->ID,
+						array(
+							'check_in_date'  => date( 'Y/m/d' ),
+							'check_out_date' => date( 'Y/m/d', strtotime( "+{$minium_booking_night} day" ) ),
+						)
+					);
+					$error_message = is_wp_error( $available_qty ) ? $available_qty->get_error_message() : '';
+					$available_qty = is_wp_error( $available_qty ) ? 0 : $available_qty;
+					echo sprintf( '<p>%d</p>', $available_qty );
+					if ( $error_message ) {
+						echo sprintf( '<p>%s</p>', $error_message );
+					}
 					break;
 			}
 		}
@@ -599,6 +634,10 @@ if ( ! class_exists( 'WPHB_Post_Types' ) ) {
 		 * Register custom post types
 		 */
 		public function register_post_types() {
+			// Set to $has_archive return link to courses page, is_archive will check is true
+			$rooms_page_id = hb_get_page_id( 'rooms' );
+			$has_archive   = $rooms_page_id ? urldecode( get_page_uri( $rooms_page_id ) ) : 'rooms';
+
 			/**
 			 * Register custom post type for room
 			 */
@@ -622,7 +661,7 @@ if ( ! class_exists( 'WPHB_Post_Types' ) ) {
 				'query_var'          => true,
 				'publicly_queryable' => true,
 				'show_ui'            => true,
-				'has_archive'        => true,
+				'has_archive'        => $has_archive,
 				'capability_type'    => 'hb_room',
 				'map_meta_cap'       => true,
 				'show_in_menu'       => true,
@@ -640,7 +679,7 @@ if ( ! class_exists( 'WPHB_Post_Types' ) ) {
 				),
 				'hierarchical'       => false,
 				'rewrite'            => array(
-					'slug'       => _x( 'rooms', 'URL slug', 'wp-hotel-booking' ),
+					'slug'       => _x( 'room', 'URL slug', 'wp-hotel-booking' ),
 					'with_front' => false,
 					'feeds'      => true,
 				),
@@ -689,6 +728,10 @@ if ( ! class_exists( 'WPHB_Post_Types' ) ) {
 
 			if ( is_admin() ) {
 				WP_Hotel_Booking::instance()->_include( 'includes/walkers/class-wphb-walker-room-type-dropdown.php' );
+			}
+
+			if ( is_admin() ) {
+				flush_rewrite_rules();
 			}
 		}
 
@@ -817,6 +860,33 @@ if ( ! class_exists( 'WPHB_Post_Types' ) ) {
 				'label_count'               => _n_noop( 'Completed <span class="count">(%s)</span>', 'Completed <span class="count">(%s)</span>', 'wp-hotel-booking' ),
 			);
 			register_post_status( 'hb-completed', $args );
+		}
+
+		/**
+		 * Custom url to set default dates, quantity,... in booking form
+		 * @param  string $post_link post permalink
+		 * @param  WP_Post $post
+		 * @return $post_link
+		 */
+		public function custom_room_url( $post_link, $post ){
+			if ( 'hb_room' !== $post->post_type ) {
+			    return $post_link;
+			}
+			
+			if ( ! empty( hb_get_request( 'check_in_date' ) ) && ! empty( hb_get_request( 'check_out_date' ) ) ) {
+			    
+			    // Preserve search parameters
+			    $params = array(
+			    	'check_in_date'  => urlencode( hb_get_request( 'check_in_date', date( 'Y/m/d' ) ) ),
+			    	'check_out_date' => urlencode( hb_get_request( 'check_out_date', date( 'Y/m/d', strtotime( '+1 day' ) ) ) ),
+			    	'adults'         => hb_get_request( 'adults', 1 ),
+			    	'max_child'      => hb_get_request( 'max_child', 0 ),
+			    	'room_qty'       => hb_get_request( 'room_qty', 1 ),
+			    );
+			    
+			    return add_query_arg( $params, $post_link );
+			}
+			return $post_link;
 		}
 	}
 }

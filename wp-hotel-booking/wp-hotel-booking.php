@@ -4,7 +4,7 @@
  * Plugin URI: http://thimpress.com/
  * Description: Full of professional features for a booking room system
  * Author: ThimPress
- * Version: 2.2.3
+ * Version: 2.2.9
  * Author URI: http://thimpress.com
  * Text Domain: wp-hotel-booking
  * Domain Path: /languages/
@@ -15,6 +15,8 @@
 
 use WPHB\TemplateHooks\CheckRoomsTemplate;
 use WPHB\TemplateHooks\ArchiveRoomTemplate;
+use WPHB\TemplateHooks\SingleRoomExternalLinkTemplate;
+use WPHB\TemplateHooks\Admin\AdminExternalLinkIconSetting;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -88,12 +90,16 @@ class WP_Hotel_Booking {
 		// add_action( 'admin_init', array( $this, 'create_tables' ) );
 		register_activation_hook( plugin_basename( __FILE__ ), array( $this, 'install' ) );
 		register_deactivation_hook( plugin_basename( __FILE__ ), array( $this, 'uninstall' ) );
-		// add_action( 'plugin_loaded', array( $this, 'install' ) );
+		add_action( 'plugin_loaded', function() {
+			if ( ! get_option( 'hotel_booking_version', false ) ) {
+				$this->install();
+			}
+		} );
 
 		add_action( 'init', array( $this, 'init' ), 20 );
 
 		// create new blog in multisite
-		add_action( 'wpmu_new_blog', array( $this, 'create_new_blog' ), 10, 6 );
+		add_action( 'wp_initialize_site', array( $this, 'create_new_blog' ), 10, 2 );
 		// multisite delete table in multisite
 		add_filter( 'wpmu_drop_tables', array( $this, 'delete_blog_table' ) );
 
@@ -145,8 +151,8 @@ class WP_Hotel_Booking {
 	}
 
 	// create new blog table
-	public function create_new_blog( $blog_id, $user_id, $domain, $path, $site_id, $meta ) {
-		WPHB_Install::create_new_blog( $blog_id, $user_id, $domain, $path, $site_id, $meta );
+	public function create_new_blog( $new_site, $args ) {
+		WPHB_Install::create_new_blog( $new_site, $args );
 	}
 
 	// delete table when delete blog, multisite
@@ -233,6 +239,8 @@ class WP_Hotel_Booking {
 
 		CheckRoomsTemplate::instance()->init();
 		ArchiveRoomTemplate::instance()->init();
+		AdminExternalLinkIconSetting::instance()->init();
+		SingleRoomExternalLinkTemplate::instance()->init();
 	}
 
 
@@ -428,6 +436,7 @@ class WP_Hotel_Booking {
 		wp_register_style( 'wp-admin-hotel-booking-fullcalendar', $this->plugin_url( 'assets/css/fullcalendar.min.css' ) );
 		wp_register_style( 'wp-hotel-booking', $this->plugin_url( 'assets/css/hotel-booking.css' ), [], WPHB_VERSION );
 		wp_register_style( 'wp-hotel-booking-theme-default', $this->plugin_url( 'assets/css/theme-default.css' ), [], rand() );
+		wp_register_style( 'wp-hotel-booking-checkout', $this->plugin_url( 'assets/css/check-out.css' ), [], rand() );
 		wp_register_style( 'wp-admin-hotel-booking-calendar-v2', $this->plugin_url( 'assets/css/admin/main.min.css' ) );
 		wp_register_style( 'tingle-css', $this->plugin_url( 'assets/lib/tingle.css' ) );
 		wp_register_style( 'flatpickr-css', $this->plugin_url( 'assets/lib/flatpickr.min.css' ) );
@@ -455,7 +464,15 @@ class WP_Hotel_Booking {
 					false,
 					true
 				);
-			}
+			} else if ( $screen && WPHB_ROOM_CT === $screen->post_type && 'post' === $screen->base ) {
+		        wp_register_script(
+					'wphb-admin-room-external-link',
+					$this->plugin_url( "assets/dist/js/admin/room-external-link{$min}.js" ),
+					$dependencies,
+					false,
+					true
+				);
+		    }
 		}
 
 		wp_register_script(
@@ -466,7 +483,7 @@ class WP_Hotel_Booking {
 		);
 		wp_register_script(
 			'wp-admin-room-filter',
-			$this->plugin_url( "assets/js/admin/room-filter{$min}.js" ),
+			$this->plugin_url( "assets/js/admin/room-filter.js" ),
 			array_merge( $dependencies, array() ),
 			$v_rand
 		);
@@ -573,7 +590,10 @@ class WP_Hotel_Booking {
 			wp_enqueue_script( 'wp-hotel-booking-filter-by' );
 			wp_enqueue_script( 'wp-hotel-booking-room-review' );
 			wp_enqueue_style( 'flatpickr-css' );
-
+			if ( ( ! empty( hb_settings()->get( 'cart_page_id' ) ) && ! is_page( hb_settings()->get( 'cart_page_id' ) ) )
+				|| ( ! empty( hb_settings()->get( 'checkout_page_id' ) ) && ! is_page( hb_settings()->get( 'checkout_page_id' ) ) ) ) {
+				wp_enqueue_style( 'wp-hotel-booking-checkout' );
+			}
 			// Load scripts and styles for single room
 			if ( is_singular( 'hb_room' ) ) {
 				wp_enqueue_style( 'tingle-css' );
@@ -671,6 +691,7 @@ class WP_Hotel_Booking {
 				wphb_rest_nonce: '<?php echo wp_create_nonce( 'wp_rest' ); ?>',
 				is_page_search: <?php echo is_page( hb_get_page_id( 'search' ) ) ? 1 : 0; ?>,
 				url_page_search: '<?php echo get_permalink( hb_get_page_id( 'search' ) ); ?>',
+				url_page_rooms: '<?php echo get_permalink( hb_get_page_id( 'rooms' ) ); ?>',
 				room_id: <?php echo isset( $screen->id ) && $screen->id == 'hb_room' ? get_the_ID() : 0; ?>,
 				block_dates:
 				<?php
@@ -692,6 +713,7 @@ class WP_Hotel_Booking {
 				decimals_separator: '<?php echo $decimals_separator; ?>',
 				number_decimal: '<?php echo $number_decimal; ?>',
 				user_id: '<?php echo get_current_user_id(); ?>',
+				include_tax:'<?php echo hb_price_including_tax() ? (float) WPHB_Settings::instance()->get( 'tax' ) : 0; ?>',
 			}
 		</script>
 		<?php

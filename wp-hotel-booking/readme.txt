@@ -2,8 +2,8 @@
 Contributors: thimpress, leehld, phamtungpth, thoakim
 Donate link: https://thimpress.com/
 Tags: hotel booking, reservation, booking system, room management, accommodation
-Tested up to: 6.8
-Stable tag: 2.2.3
+Tested up to: 6.9
+Stable tag: 2.2.9
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -15,7 +15,7 @@ WP Hotel Booking is a comprehensive solution for hotel owners, lodges, or any ac
 
 ###How to get help from us###
 
-- [Demo](https://sailing.thimpress.com/demo-11/)
+- [Demo](https://sailing.thimpress.com/)
 - [Documentation](https://docs.thimpress.com/wp-hotel-booking/)
 - [Get Support](https://help.thimpress.com/)
 
@@ -86,6 +86,34 @@ Yes.
 7. System settings
 
 == Changelog ==
+
+= 2.2.9 (2026-02-06) =
+~ Fixed: security.
+~ Update: layout checkout page.
+
+= 2.2.8 (2025-12-30) =
+~ Fixed: security.
+
+= 2.2.7 (2025-12-01) =
+~ Fixed: minor bugs.
+
+= 2.2.6 (2025-11-27) =
+~ Fixed: bug input select-date-range display after submit cf7.
+~ Fixed: show external link in widget loop item Elementor.
+
+= 2.2.5 (20205-11-17) =
+~ Fixed: responsive calendar in tablet and mobile.
+~ Fixed: minor bugs.
+
+= 2.2.4 (20205-11-13) =
+~ Feature: external link.
+~ Tweak: hotel_booking_get_room_available function.
+~ Tweak: layout single room page, archive room page.
+~ Fixed: render calendar pricing
+~ Remove search page, use archive room page instead.
+~ Remove setting "Single Purchase".
+~ Remove setting set "Search Page".
+~ Remove setting "Max Adults Rooms".
 
 = 2.2.3 (2025-08-18) =
 ~ Fixed: security.

@@ -67,10 +67,11 @@ class Thim_Ekit_Widget_Search_Room extends Widget_Base {
 				'type'    => Controls_Manager::SELECT,
 				'default' => 'types',
 				'options' => [
- 					'date'      	=> esc_html__( 'Date', 'wp-hotel-booking' ),
-					'adults'    	=> esc_html__( 'Adults', 'wp-hotel-booking' ),
-					'children'     	=> esc_html__( 'Children', 'wp-hotel-booking' ),
-					'submit'     	=> esc_html__( 'Submit', 'wp-hotel-booking' )
+ 					'date'     => esc_html__( 'Date', 'wp-hotel-booking' ),
+					'adults'   => esc_html__( 'Adults', 'wp-hotel-booking' ),
+					'children' => esc_html__( 'Children', 'wp-hotel-booking' ),
+					'rooms'    => esc_html__( 'Rooms', 'wp-hotel-booking' ),
+					'submit'   => esc_html__( 'Submit', 'wp-hotel-booking' ),
 				]
 			]
         );
@@ -101,7 +102,7 @@ class Thim_Ekit_Widget_Search_Room extends Widget_Base {
 					'number_box'   => esc_html__( 'Number Box', 'wp-hotel-booking' ),
 				),
 				'condition'     => [
-					'meta_field' => ['adults', 'children'],
+					'meta_field' => ['adults', 'children', 'rooms'],
 				]
 			)
 		);
@@ -526,6 +527,10 @@ class Thim_Ekit_Widget_Search_Room extends Widget_Base {
 							case 'children':
 								$this->hb_render_children($data, $classes);
 								break;
+							case 'rooms':
+								$this->hb_render_rooms($data, $classes);
+								break;
+
 							case 'submit':
 								$this->hb_render_submit($data, $classes);
 								break;
@@ -550,14 +555,14 @@ class Thim_Ekit_Widget_Search_Room extends Widget_Base {
 		$date_tomorrow  = new WPHB_Datetime( strtotime( $date_now->get_raw_date() . ' +1 day' ) );
 		$check_in_date  = WPHB_Helpers::get_param( 'check_in_date', $date_now->format( $format ) );
 		$check_out_date = WPHB_Helpers::get_param( 'check_out_date', $date_tomorrow->format( $format ) );
-		$label_check_in  = $settings['label_field_date'] ?? esc_html__('Arrival Date', 'wp-hotel-booking');
-		$label_check_out = $settings['label_field_check_out'] ?? esc_html__('Departure Date', 'wp-hotel-booking');
+		$label_check_in  = $settings['label_field_date'] ?? esc_html__('Check-in Date', 'wp-hotel-booking');
+		$label_check_out = $settings['label_field_check_out'] ?? esc_html__('Check-out Date', 'wp-hotel-booking');
 
 		if ($settings['layout_date'] == 'single') {
 			?>
 			<li class="hb-form-field <?php echo esc_attr($classes); ?>">
 				<?php if ( $label_check_in != '' ) :?>
-					<div class="label"><?php echo $label_check_in; ?></div>
+					<div class="label"><?php echo esc_html( $label_check_in ); ?></div>
 				<?php endif; ?>
 				<div class="hb-form-field-input hb_input_field">
 					<?php if ( $settings['icons_field'] ) {
@@ -569,7 +574,7 @@ class Thim_Ekit_Widget_Search_Room extends Widget_Base {
 
 			<li class="hb-form-field <?php echo esc_attr($classes); ?>">
 				<?php if ( $label_check_out != '' ) :?>
-					<div class="label"><?php echo $label_check_out; ?></div>
+					<div class="label"><?php echo esc_html( $label_check_out ); ?></div>
 				<?php endif; ?>
 				<div class="hb-form-field-input hb_input_field">
 					<?php if ( $settings['icons_field'] ) {
@@ -601,7 +606,7 @@ class Thim_Ekit_Widget_Search_Room extends Widget_Base {
 	}
 
 	protected function hb_render_adults($settings, $classes) {
-		$adults         = hb_get_request('adults', '1');
+		$adults         = hb_get_request( 'adults_capacity', hb_get_request( 'adults', 1 ) );
 		$label_adults   = !empty($settings['label_field']) ? $settings['label_field'] : esc_html__('Adults', 'wp-hotel-booking');
 
 		if ( $settings['layout_guest'] == 'select') {
@@ -611,7 +616,7 @@ class Thim_Ekit_Widget_Search_Room extends Widget_Base {
 					Icons_Manager::render_icon( $settings['icons_field'], array( 'aria-hidden' => 'true', 'class' => 'icon-custom' ) );
 				} ?>
 				<?php if ( $label_adults != '' ) :?>
-					<div class="label"><?php echo $label_adults; ?></div>
+					<div class="label"><?php echo esc_html( $label_adults ); ?></div>
 				<?php endif; ?>
 				<div class="hb-form-field-input">
 					<?php
@@ -619,7 +624,7 @@ class Thim_Ekit_Widget_Search_Room extends Widget_Base {
 						array(
 							'name'              => 'adults_capacity',
 							'min'               => 1,
-							'max'               => hb_get_max_capacity_of_rooms(),
+							'max'               => 10,
 							'show_option_none'  => $label_adults,
 							'selected'          => $adults,
 							'option_none_value' => 0,
@@ -640,7 +645,7 @@ class Thim_Ekit_Widget_Search_Room extends Widget_Base {
 					<div class="label"><?php echo $label_adults; ?></div>
 				<?php endif; ?>
 				<div id="adults" class="hb-form-field-input hb_input_field">
-					<input type="text" id="number" class="adults-input" value="<?php echo esc_attr($adults) ?>" readonly />
+					<input type="text" class="adults-input" value="<?php echo esc_attr($adults) ?>" readonly />
 					<span><?php echo $label_adults; ?></span>
 				</div>
 				<div class="hb-form-field-list nav-adults">
@@ -653,7 +658,7 @@ class Thim_Ekit_Widget_Search_Room extends Widget_Base {
 								array(
 									'name'              => 'adults_capacity',
 									'min'               => 1,
-									'max'               => hb_get_max_capacity_of_rooms(),
+									'max'               => 10,
 									'selected'          => $adults,
 									'option_none_value' => '',
 									'options'           => hb_get_capacity_of_rooms(),
@@ -708,7 +713,7 @@ class Thim_Ekit_Widget_Search_Room extends Widget_Base {
 					<div class="label"><?php echo $label_child; ?></div>
 				<?php endif; ?>
 				<div id="child" class="hb-form-field-input hb_input_field">
-					<input type="text" id="number" class="child-input" value="<?php echo esc_attr($max_child) ?>" readonly />
+					<input type="text" class="child-input" value="<?php echo esc_attr($max_child) ?>" readonly />
 					<span><?php echo $label_child; ?></span>
 				</div>
 				<div class="hb-form-field-list nav-children">
@@ -730,6 +735,75 @@ class Thim_Ekit_Widget_Search_Room extends Widget_Base {
 						</span>
 						<span class="number-icons goUp"><i class="fa fa-plus"></i></span>
 					</div>
+				</div>
+			</li>
+			<?php
+		}
+	}
+
+	protected function hb_render_rooms($settings, $classes) {
+		$quantity = hb_get_request( 'room_qty', 1, 'int' );
+		$label    = !empty($settings['label_field']) ? $settings['label_field'] : esc_html__('Rooms', 'wp-hotel-booking');
+
+		if ( $settings['layout_guest'] == 'select') {
+			?>
+			<li class="hb-form-field <?php echo esc_attr($classes); ?>">
+				<?php if ( $settings['icons_field'] ) {
+					Icons_Manager::render_icon( $settings['icons_field'], array( 'aria-hidden' => 'true', 'class' => 'icon-custom' ) );
+				} ?>
+				<?php if ( $label != '' ) :?>
+					<div class="label"><?php echo $label; ?></div>
+				<?php endif; ?>
+				<div class="hb-form-field-input">
+					<?php
+					hb_dropdown_numbers(
+						array(
+							'name'              => 'number-of-rooms',
+							'min'               => 1,
+							'max'               => 10,
+							'show_option_none'  => $label,
+							'option_none_value' => 0,
+							'selected'          => $quantity,
+						)
+					);
+					?>
+				</div>
+			</li>
+			<?php
+		} else {
+			?>
+			<li class="hb-form-field hb-form-number <?php echo esc_attr($classes); ?>">
+				<?php if ( $settings['icons_field'] ) {
+					Icons_Manager::render_icon( $settings['icons_field'], array( 'aria-hidden' => 'true', 'class' => 'icon-custom' ) );
+				} ?>
+				<?php if ( $label != '' ) :?>
+				<div class="label"><?php echo $label; ?></div>
+				<?php endif; ?>
+				<div id="number-of-rooms" class="hb-form-field-input hb_input_field">
+					<input type="text" class="number-of-rooms-input" value="<?php echo esc_attr($quantity); ?>" readonly />
+					<span><?php echo $label; ?></span>
+				</div>
+				<div class="hb-form-field-list nav-number-of-rooms">
+					<span class="name"><?php echo $label; ?></span>
+
+					<div class="number-box">
+						<span class="number-icons goDown"><i class="fa fa-minus"></i></span>
+						<span class="hb-guest-field room-qty-number">
+							<?php
+							hb_dropdown_numbers(
+								array(
+									'name'              => 'number-of-rooms',
+									'min'               => 1,
+									'max'               => 10,
+									'option_none_value' => 0,
+									'selected'          => $quantity,
+								)
+							);
+							?>
+						</span>
+						<span class="number-icons goUp"><i class="fa fa-plus"></i></span>
+					</div>
+
 				</div>
 			</li>
 			<?php

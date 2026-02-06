@@ -46,6 +46,20 @@ class WPHB_REST_Rooms_Controller extends WPHB_Abstract_REST_Controller {
 					'permission_callback' => '__return_true',
 				),
 			),
+			'single-room-price-details'   => array(
+				array(
+					'methods'             => WP_REST_Server::CREATABLE,
+					'callback'            => array( $this, 'single_room_price_details' ),
+					'permission_callback' => '__return_true',
+				),
+			),
+			'calculate-booking-price'   => array(
+				array(
+					'methods'             => WP_REST_Server::CREATABLE,
+					'callback'            => array( $this, 'calculate_booking_price' ),
+					'permission_callback' => '__return_true',
+				),
+			),
 			// 'remove-item'    => array(
 			// array(
 			// 'methods'             => WP_REST_Server::CREATABLE,
@@ -161,6 +175,8 @@ class WPHB_REST_Rooms_Controller extends WPHB_Abstract_REST_Controller {
 		$check_in_date  = sanitize_text_field( wp_unslash( $params['checkinDate'] ?? '' ) );
 		$check_out_date = sanitize_text_field( wp_unslash( $params['checkoutDate'] ?? '' ) );
 		$num_room       = absint( $params['numRoom'] ?? 1 );
+		$adults         = absint( $params['adults'] ) ?? 1;
+		$child          = absint( $params['maxChild'] ) ?? 0;
 
 		// add extra room when disable option :tp_hotel_booking_custom_process
 		$extra_data         = $params['extraData'] ?? array();
@@ -198,6 +214,8 @@ class WPHB_REST_Rooms_Controller extends WPHB_Abstract_REST_Controller {
 			'check_out_date'                => $check_out_date,
 			'hb_optional_quantity_selected' => $extra_selected,
 			'hb_optional_quantity'          => $extra_selected_qty,
+			'adult_qty'                     => $adults,
+			'child_qty'                     => $child,
 		);
 
 		try {
@@ -251,14 +269,7 @@ class WPHB_REST_Rooms_Controller extends WPHB_Abstract_REST_Controller {
 
 				if ( ! empty( $additionPackage ) ) {
 					// Addition package not null && custom_process
-					$results['redirect']  = get_option( 'tp_hotel_booking_custom_process' ) ? add_query_arg(
-						array(
-							'is_page_room_extra' => 'select-room-extra',
-							'cart_id'            => $cart_item_id,
-							'room_id'            => $room_id,
-						),
-						hb_get_search_room_url()
-					) : '';
+					$results['redirect']  = '';
 					$results['has_extra'] = true;
 					ob_start();
 					wphb_get_template_no_override(
@@ -356,6 +367,12 @@ class WPHB_REST_Rooms_Controller extends WPHB_Abstract_REST_Controller {
 		}
 		wp_send_json( $response );
 	}
+
+	/**
+	 * get room pricing plan per day. show on single room pricing plan calendar
+	 * @param  WP_REST_Request $request
+	 * @return WPHB_REST_RESPONSE $response
+	 */
 	public function room_pricing( WP_REST_Request $request ) {
 		$params   = $request->get_params();
 		$response = new WPHB_REST_RESPONSE();
@@ -376,13 +393,21 @@ class WPHB_REST_Rooms_Controller extends WPHB_Abstract_REST_Controller {
 			
 			$first_month_pricing  = $this->get_room_pricing( $room_id, $first_month_date_str );
 			$second_month_pricing = $this->get_room_pricing( $room_id, $second_month_date_obj->format('m/d/Y') );
-			$response->status = 'success';
+
+			$response->status        = 'success';
 			$response->data->pricing = array_merge( $first_month_pricing, $second_month_pricing );
 		} catch (Exception $e) {
 			$response->message = $e->getMessage();
 		}
 		return rest_ensure_response( $response );
 	}
+
+	/**
+	 * get room pricing in a month
+	 * @param  integer $room_id [description]
+	 * @param  string $date    [description]
+	 * @return array
+	 */
 	public function get_room_pricing( $room_id = null, $date = null ) {
 		$start = date( 'm/01/Y', strtotime( $date ) );
 		$end   = date( 'm/t/Y', strtotime( $date ) );
@@ -407,5 +432,134 @@ class WPHB_REST_Rooms_Controller extends WPHB_Abstract_REST_Controller {
 		}
 
 		return $pricing;
+	}
+
+	public function single_room_price_details( WP_REST_Request $request ) {
+		$response = new WPHB_REST_RESPONSE();
+		try {
+			$qty            = WPHB_Helpers::get_param( 'hb-num-of-rooms', 1, 'int' );
+			$room_id        = WPHB_Helpers::get_param( 'room-id', 0, 'int' );
+			$check_in_date  = WPHB_Helpers::get_param( 'check_in_date', date( 'Y/m/d' ) );
+			$check_out_date = WPHB_Helpers::get_param( 'check_out_date', date( 'Y/m/d', strtotime( '+1 day' ) ) );
+			$adult_qty      = WPHB_Helpers::get_param( 'adult_qty', 1, 'int' );
+			$child_qty      = WPHB_Helpers::get_param( 'child_qty', 0, 'int' );
+
+			$hb_optional_quantity_selected = WPHB_Helpers::get_param( 'hb_optional_quantity_selected', [] );
+			$hb_optional_quantity          = WPHB_Helpers::get_param( 'hb_optional_quantity', [] );
+			if ( ! $room_id ) {
+				throw new Exception( esc_html__( 'roomId is required', 'wp-hotel-booking' ) );
+			}
+			if ( get_post_type( $room_id ) !== 'hb_room' ) {
+				throw new Exception( esc_html__( 'roomId is invalid', 'wp-hotel-booking' ) );
+			}
+			
+			$room = WPHB_Room::instance( $room_id,
+				array(
+					'check_in_date'  => $check_in_date,
+					'check_out_date' => $check_out_date,
+					'quantity'       => $qty,
+				)
+			);
+			$extra_info = array();
+			if ( ! empty( $hb_optional_quantity_selected ) && ! empty( $hb_optional_quantity ) ) {
+				foreach ( $hb_optional_quantity_selected as $extra_id => $select ) {
+					$extra_info[ $extra_id ] = array(
+						'extra_id' => $extra_id,
+						'quantity' => $hb_optional_quantity[ $extra_id ],
+					);
+				}
+			}
+
+			ob_start();
+			hb_get_template(
+				'single-room/booking-room-price-details.php',
+				array(
+					'room'       => $room,
+					'extra_info' => $extra_info,
+				)
+			);
+			$content = ob_get_clean();
+
+			$response->data->price_html = $content;
+			$response->status           = 'success';
+		} catch (Exception $e) {
+			$response->message = $e->getMessage();
+		}
+		return rest_ensure_response( $response );
+	}
+
+	public function calculate_booking_price( WP_REST_Request $request ) {
+		$response = new WPHB_REST_RESPONSE();
+		try {
+			$qty            = WPHB_Helpers::get_param( 'hb-num-of-rooms', 1, 'int' );
+			$room_id        = WPHB_Helpers::get_param( 'room-id', 0, 'int' );
+			$check_in_date  = WPHB_Helpers::get_param( 'check_in_date', date( 'Y/m/d' ) );
+			$check_out_date = WPHB_Helpers::get_param( 'check_out_date', date( 'Y/m/d', strtotime( '+1 day' ) ) );
+			$adult_qty      = WPHB_Helpers::get_param( 'adult_qty', 1, 'int' );
+			$child_qty      = WPHB_Helpers::get_param( 'child_qty', 0, 'int' );
+
+			$hb_optional_quantity_selected = WPHB_Helpers::get_param( 'hb_optional_quantity_selected', [] );
+			$hb_optional_quantity          = WPHB_Helpers::get_param( 'hb_optional_quantity', [] );
+			if ( ! $room_id ) {
+				throw new Exception( esc_html__( 'roomId is required', 'wp-hotel-booking' ) );
+			}
+			if ( get_post_type( $room_id ) !== 'hb_room' ) {
+				throw new Exception( esc_html__( 'roomId is invalid', 'wp-hotel-booking' ) );
+			}
+
+			$available_qty = hotel_booking_get_room_available(
+				$room_id,
+				array(
+					'check_in_date'  => $check_in_date,
+					'check_out_date' => $check_out_date,
+				)
+			);
+
+			if ( is_wp_error( $available_qty ) ) {
+				throw new Exception ( $available_qty->get_error_message() );
+			}
+
+			if ( $qty > $available_qty ) {
+				throw new Exception(
+					sprintf(
+						esc_html__( 'The maximum number of rooms you can book is %s', 'wp-hotel-booking' ),
+						$available_qty
+					)
+				);
+			}
+			
+			$room = WPHB_Room::instance( $room_id,
+				array(
+					'check_in_date'  => $check_in_date,
+					'check_out_date' => $check_out_date,
+					'quantity'       => $qty,
+				)
+			);
+
+			$room_price  = $room->amount_singular * $qty;
+			$extra_price = 0;
+			if ( ! empty( $hb_optional_quantity_selected ) && ! empty( $hb_optional_quantity ) ) {
+				foreach ( $hb_optional_quantity_selected as $extra_id => $select ) {
+					$extra_package = hotel_booking_get_product_class( $extra_id,
+						array(
+							'product_id'     => $extra_id,
+							'check_in_date'  => $check_in_date,
+							'check_out_date' => $check_out_date,
+							'quantity'       => $hb_optional_quantity[ $extra_id ],
+						)
+					);
+					$extra_package_price = $extra_package ? $extra_package->get_price_package() : 0;
+					$extra_price         += $extra_package_price;
+				}
+			}
+			$response->status            = 'success';
+			$response->data->amount      = $room_price + $extra_price;
+			$response->data->amount_html = hb_format_price( $room_price + $extra_price );
+
+			$response->data->available_qty = $available_qty;
+		} catch (Exception $e) {
+			$response->message = $e->getMessage();
+		}
+		return rest_ensure_response( $response );
 	}
 }

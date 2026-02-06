@@ -15,13 +15,15 @@ class Elementor {
             'search-room',
 			'filter-room',
 			'filter-room-selected',
-			'list-room'
+			'list-room',
+			// 'check-avaibility', //like search room widget
         ),
 		'loop-item'  => array(
 			'loop-room-rating',
 			'loop-room-price',
 			'loop-room-info',
-			'loop-room-add-to-cart'
+			'loop-room-add-to-cart',
+			'loop-room-external-links',
 		),
         'single-room' => array(
 			'room-thumb',

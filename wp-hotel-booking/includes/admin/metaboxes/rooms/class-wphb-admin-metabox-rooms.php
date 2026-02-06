@@ -90,6 +90,13 @@ if ( ! class_exists( 'WPHB_Meta_Box_Room' ) ) {
 						'priority' => 80,
 						'content'  => $this->wphb_facilities( $post_id ),
 					),
+					'room_external_link'     => array(
+						'label'    => esc_html__( 'External OTA Platforms', 'wp-hotel-booking' ),
+						'target'   => 'room_external_link',
+						'icon'     => 'dashicons-admin-links',
+						'priority' => 90,
+						'content'  => $this->wphb_external_link( $post_id ),
+					),
 				)
 			);
 		}
@@ -206,16 +213,16 @@ if ( ! class_exists( 'WPHB_Meta_Box_Room' ) ) {
 					// ),
 					'num_of_rooms'              => array(
 						'name'  => 'num_of_rooms',
-						'label' => __( 'Quantity', 'wp-hotel-booking' ),
+						'label' => __( 'Number of Rooms', 'wp-hotel-booking' ),
 						'type'  => 'number',
 						'std'   => '100',
-						'desc'  => __( 'The number of rooms', 'wp-hotel-booking' ),
+						'desc'  => __( 'Number of available rooms for booking', 'wp-hotel-booking' ),
 						'min'   => 1,
 						'max'   => 100,
 					),
 					'room_origin_capacity'      => array(
 						'name'        => 'room_origin_capacity',
-						'label'       => __( 'Room Capacities', 'wp-hotel-booking' ),
+						'label'       => __( 'Max adults per room', 'wp-hotel-booking' ),
 						'type'        => 'select',
 						'options'     => hb_get_room_capacities(
 							array(
@@ -351,6 +358,17 @@ if ( ! class_exists( 'WPHB_Meta_Box_Room' ) ) {
 			);
 
 			return $tab_block_date;
+		}
+
+		public function wphb_external_link( $post_id ) {
+			$tabs = apply_filters(
+				'wpbh_meta_box_room_external_link_fields',
+				array(
+					'_wphb_room_external_link' => new WPHB_Admin_Metabox_Room_External_Link(),
+				)
+			);
+
+			return $tabs;
 		}
 
 		/**

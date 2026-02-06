@@ -2834,58 +2834,63 @@ __webpack_require__.r(__webpack_exports__);
     }
     return data;
   }
-  function fetchCustomerInfo() {
-    const $button = $(this),
-      $email = $('input[name="existing-customer-email"]');
-    if (!isEmail($email.val())) {
-      // alert( hotel_booking_i18n.invalid_email );
-      $email.addClass('error');
-      $email.focus();
-      return;
-    }
-    $button.attr('disabled', true);
-    $email.attr('disabled', true);
-    const customer_table = $('.hb-col-padding.hb-col-border');
-    $.ajax({
-      url: hotel_settings.ajax,
-      dataType: 'html',
-      type: 'post',
-      data: {
-        action: 'hotel_booking_fetch_customer_info',
-        email: $email.val(),
-        nonce: hotel_settings.nonce
-      },
-      beforeSend() {
-        customer_table.hb_overlay_ajax_start();
-      },
-      success(response) {
-        customer_table.hb_overlay_ajax_stop();
-        response = parseJSON(response);
-        if (response && response.ID) {
-          const $container = $('#hb-order-new-customer');
-          for (const key in response.data) {
-            const inputName = key.replace(/^_hb_customer_/, '');
-            const $field = $container.find('input[name="' + inputName + '"], select[name="' + inputName + '"], textarea[name="' + inputName + '"]');
-            $field.val(response.data[key]);
-          }
-          $container.find('input[name="existing-customer-id"]').val(response.ID);
-          $('.hb-order-existing-customer').fadeOut(function () {
-            //$(this).remove();
-          });
-        } else {
-          hotel_checkout_fetch_error([hotel_booking_i18n.invalid_email]);
-        }
-        $button.removeAttr('disabled');
-        $email.removeAttr('disabled');
-      },
-      error() {
-        customer_table.hb_overlay_ajax_stop();
-        hotel_checkout_fetch_error([hotel_booking_i18n.ajax_error]);
-        $button.removeAttr('disabled');
-        $email.removeAttr('disabled');
-      }
-    });
-  }
+
+  /*function fetchCustomerInfo() {
+  	const $button = $( this ),
+  		$email = $( 'input[name="existing-customer-email"]' );
+  	if ( ! isEmail( $email.val() ) ) {
+  		// alert( hotel_booking_i18n.invalid_email );
+  		$email.addClass( 'error' );
+  		$email.focus();
+  		return;
+  	}
+  	$button.attr( 'disabled', true );
+  	$email.attr( 'disabled', true );
+  	const customer_table = $( '.hb-col-padding.hb-col-border' ),
+  	nonceField = $email.closest( '.hb-form-field-input' ).find( '[name="existing-customer-nonce"]' );
+  
+  	$.ajax( {
+  		url: hotel_settings.ajax,
+  		dataType: 'html',
+  		type: 'post',
+  		data: {
+  			action: 'hotel_booking_fetch_customer_info',
+  			email: $email.val(),
+  			_ajax_nonce: nonceField?.val() ?? '',
+  			_wp_http_referer: window.location.pathname
+  		},
+  		beforeSend() {
+  			customer_table.hb_overlay_ajax_start();
+  		},
+  		success( response ) {
+  			customer_table.hb_overlay_ajax_stop();
+  			response = parseJSON( response );
+  			if ( response && response.ID ) {
+  				const $container = $( '#hb-order-new-customer' );
+  				for ( const key in response.data ) {
+  					const inputName = key.replace( /^_hb_customer_/, '' );
+  					const $field = $container.find( 'input[name="' + inputName + '"], select[name="' + inputName + '"], textarea[name="' + inputName + '"]' );
+  					$field.val( response.data[ key ] );
+  				}
+  				$container.find( 'input[name="existing-customer-id"]' ).val( response.ID );
+  				$( '.hb-order-existing-customer' ).fadeOut( function() {
+  					//$(this).remove();
+  				} );
+  			} else {
+  				hotel_checkout_fetch_error( [ hotel_booking_i18n.invalid_email ] );
+  			}
+  			$button.removeAttr( 'disabled' );
+  			$email.removeAttr( 'disabled' );
+  		},
+  		error() {
+  			customer_table.hb_overlay_ajax_stop();
+  			hotel_checkout_fetch_error( [ hotel_booking_i18n.ajax_error ] );
+  			$button.removeAttr( 'disabled' );
+  			$email.removeAttr( 'disabled' );
+  		},
+  	} );
+  }*/
+
   function hotel_checkout_fetch_error(msgs) {
     if (msgs.length === 0) {
       return;
@@ -3177,20 +3182,20 @@ __webpack_require__.r(__webpack_exports__);
       			continue;
       		}
       	}
-      		if ( typeof res.sub_total !== 'undefined' ) {
+      			if ( typeof res.sub_total !== 'undefined' ) {
       		_table.find( 'span.hb_sub_total_value' ).html( res.sub_total );
       	}
-      		if ( typeof res.grand_total !== 'undefined' ) {
+      			if ( typeof res.grand_total !== 'undefined' ) {
       		_table.find( 'span.hb_grand_total_value' ).html( res.grand_total );
       	}
-      		if ( typeof res.advance_payment !== 'undefined' ) {
+      			if ( typeof res.advance_payment !== 'undefined' ) {
       		_table.find( 'span.hb_advance_payment_value' ).html( res.advance_payment );
       	}
       }*/
     },
     /*add_to_cart: function () {
     	var searchResult = $('form.hb-search-room-results');
-    		$(document).on('submit', 'form.hb-search-room-results', function (event) {
+    			$(document).on('submit', 'form.hb-search-room-results', function (event) {
     		event.preventDefault();
     		var _form = $(this),
     			button = _form.find('.hb_add_to_cart'),
@@ -3198,22 +3203,22 @@ __webpack_require__.r(__webpack_exports__);
     			select = _form.find('.number_room_select'),
     			number_room_select = _form.find('.number_room_select option:selected').val(),
     			room_title = _form.find('.hb-room-name');
-    			if (!hotel_settings?.cart_page_url && button.length > 0) {
+    				if (!hotel_settings?.cart_page_url && button.length > 0) {
     			alert('Please set Cart page url in settings');
     			return;
     		}
-    			$('.number_room_select').removeClass('hotel_booking_invalid_quantity');
+    				$('.number_room_select').removeClass('hotel_booking_invalid_quantity');
     		if (typeof number_room_select === 'undefined' || number_room_select === '') {
     			select.addClass('hotel_booking_invalid_quantity');
     			room_title.find('.hb-message').remove();
     			room_title.append('<label class="hb-message error">' + hotel_booking_i18n.waring.room_select + '</label>');
-    				setTimeout(function () {
+    					setTimeout(function () {
     				room_title.find('.hb-message').remove();
     			}, 2000);
-    				return false;
+    					return false;
     		}
     		var data = $(this).serializeArray();
-    			$.ajax({
+    				$.ajax({
     			url: hotel_settings.ajax,
     			type: 'POST',
     			data: data,
@@ -3234,10 +3239,10 @@ __webpack_require__.r(__webpack_exports__);
     							room_title.find('.hb_success_message').remove();
     						}, 3000);
     					}
-    						if (rs.status === 'success') {
+    							if (rs.status === 'success') {
     						// update woo cart when add room to cart
     						$('body').trigger('hb_added_item_to_cart');
-    							if (typeof rs.redirect !== 'undefined' && rs.redirect) {
+    								if (typeof rs.redirect !== 'undefined' && rs.redirect) {
     							window.location.href = rs.redirect;
     						}
     					} else {
@@ -3245,10 +3250,10 @@ __webpack_require__.r(__webpack_exports__);
     						button.find('span.lds-ring').remove();
     					}
     				}
-    					if (typeof rs.id !== 'undefined') {
+    						if (typeof rs.id !== 'undefined') {
     					HB_Booking_Cart.hb_add_to_cart_callback(rs);
     				}
-    					button.html(old_text);
+    						button.html(old_text);
     				button.removeAttr('disabled');
     				if (_form.find('.hb_search_add_to_cart').length) {
     					if (!_form.find('.hb_search_add_to_cart .hb_view_cart').length) {
@@ -3274,7 +3279,7 @@ __webpack_require__.r(__webpack_exports__);
     		submit_button.attr('disabled', 'disabled');
     		submit_button.html('<span class="lds-ring"><span></span><span></span><span></span><span></span></span>' + submit_button.html());
     		var data = $(this).serializeArray();
-    			$.ajax({
+    				$.ajax({
     			url: hotel_settings.ajax,
     			type: 'POST',
     			data: data,
@@ -3388,20 +3393,20 @@ __webpack_require__.r(__webpack_exports__);
     		var unique = $(this).attr('id');
     		unique = unique.replace('check_in_date_', '');
     		var date = $(this).datepicker('getDate');
-    			var check_in_range_check_out = hotel_settings.min_booking_date;
+    				var check_in_range_check_out = hotel_settings.min_booking_date;
     		if (!isInteger(check_in_range_check_out)) {
     			check_in_range_check_out = 1;
     		}
-    			if (date) {
+    				if (date) {
     			date.setDate(date.getDate() + check_in_range_check_out);
     		}
-    			var checkout = $('#check_out_date_' + unique);
+    				var checkout = $('#check_out_date_' + unique);
     		checkout.datepicker('option', 'minDate', date);
     	}
     }).on('click', function () {
     	$(this).datepicker('show');
     });
-    	$('input[id^="check_out_date"]').datepicker({
+    		$('input[id^="check_out_date"]').datepicker({
     	dateFormat: hotel_booking_i18n.date_time_format,
     	monthNames: hotel_booking_i18n.monthNames,
     	monthNamesShort: hotel_booking_i18n.monthNamesShort,
@@ -3416,12 +3421,12 @@ __webpack_require__.r(__webpack_exports__);
     		unique = unique.replace('check_out_date_', '');
     		var check_in = $('#check_in_date_' + unique),
     			selected = $(this).datepicker('getDate');
-    			var check_in_range_check_out = hotel_settings.min_booking_date;
+    				var check_in_range_check_out = hotel_settings.min_booking_date;
     		if (!isInteger(check_in_range_check_out)) {
     			check_in_range_check_out = 1;
     		}
-    			selected.setDate(selected.getDate() - check_in_range_check_out);
-    			check_in.datepicker('option', 'maxDate', selected);
+    				selected.setDate(selected.getDate() - check_in_range_check_out);
+    				check_in.datepicker('option', 'maxDate', selected);
     	}
     }).on('click', function () {
     	$(this).datepicker('show');
@@ -3545,7 +3550,9 @@ __webpack_require__.r(__webpack_exports__);
         alert(e);
       }
     });
-    $('#fetch-customer-info').click(fetchCustomerInfo);
+
+    // $( '#fetch-customer-info' ).click( fetchCustomerInfo );
+
     $doc.on('click', '.hb-view-booking-room-details, .hb_search_room_item_detail_price_close', function (e) {
       e.preventDefault();
       const _self = $(this);
@@ -3568,7 +3575,8 @@ __webpack_require__.r(__webpack_exports__);
         type: 'post',
         dataType: 'html',
         data: {
-          action: 'hotel_booking_remove_coupon'
+          action: 'hotel_booking_remove_coupon',
+          nonce: hotel_settings.nonce
         },
         beforeSend() {
           table.hb_overlay_ajax_start();
@@ -3622,7 +3630,7 @@ __webpack_require__.r(__webpack_exports__);
       const tab_id = $(this).attr('href');
       hb_single_tab_details.hide();
       hb_single_details_content.find(tab_id).fadeIn();
-      return false;
+      // return false;
     });
     $('.hb-rating-input').rating();
     $('#commentform').submit(function () {
@@ -3742,7 +3750,8 @@ __webpack_require__.r(__webpack_exports__);
   };
 })(jQuery);
 'use strict';
-let datePickerCheckIn, datePickerCheckOut, datePickerRange;
+
+// let datePickerCheckIn, datePickerCheckOut, datePickerRange;
 const wphbDatePicker = () => {
   const elFormTables = document.querySelectorAll('.hb-form-table');
   if (!elFormTables.length) {
@@ -3756,7 +3765,7 @@ const wphbDatePicker = () => {
     const dateNow = new Date();
     const dateTomorrow = new Date(dateNow.setDate(dateNow.getDate() + 1));
     const minBookingDateNumber = hotel_settings.min_booking_date > 0 ? parseInt(hotel_settings.min_booking_date) : 1;
-    if (elDateCheckIn && !elDateCheckIn.closest('.hb-form-check-in-check-out')) {
+    if (elDateCheckIn && elDateCheckOut && !elDateCheckIn.closest('.hb-form-check-in-check-out')) {
       // Check in date
       const optionCheckIn = {
         dateFormat: 'Y/m/d',
@@ -3772,16 +3781,14 @@ const wphbDatePicker = () => {
             const dateSelected = selectedDates[0];
             datePickerCheckOut.clear();
             const dateNext = new Date(dateSelected.setDate(dateSelected.getDate() + minBookingDateNumber));
-            console.log(dateNext);
+            elDateCheckOut.focus();
             datePickerCheckOut.set('minDate', dateNext);
-            //datePickerCheckOut.set( 'date', dateNext );
             datePickerCheckOut.open();
           }
         }
       };
-      datePickerCheckIn = (0,flatpickr__WEBPACK_IMPORTED_MODULE_0__["default"])(elDateCheckIn, optionCheckIn);
-    }
-    if (elDateCheckOut && !elDateCheckOut.closest('.hb-form-check-in-check-out')) {
+      const datePickerCheckIn = (0,flatpickr__WEBPACK_IMPORTED_MODULE_0__["default"])(elDateCheckIn, optionCheckIn);
+
       // Check out date
       const optionCheckout = {
         dateFormat: 'Y/m/d',
@@ -3793,7 +3800,7 @@ const wphbDatePicker = () => {
         //defaultDate: dateTomorrow,
         onChange(selectedDates, dateStr, instance) {}
       };
-      datePickerCheckOut = (0,flatpickr__WEBPACK_IMPORTED_MODULE_0__["default"])(elDateCheckOut, optionCheckout);
+      const datePickerCheckOut = (0,flatpickr__WEBPACK_IMPORTED_MODULE_0__["default"])(elDateCheckOut, optionCheckout);
     }
     if (elDateRange && elDateRange.closest('.hb-form-check-in-check-out')) {
       // Check in, out dates
@@ -3820,7 +3827,7 @@ const wphbDatePicker = () => {
         },
         onChange(selectedDates, dateStr, instance) {}
       };
-      datePickerRange = (0,flatpickr__WEBPACK_IMPORTED_MODULE_0__["default"])(elDateRange, optionRange);
+      const datePickerRange = (0,flatpickr__WEBPACK_IMPORTED_MODULE_0__["default"])(elDateRange, optionRange);
       if (elDateCheckInOut) {
         elDateCheckInOut.addEventListener('click', e => {
           e.preventDefault();

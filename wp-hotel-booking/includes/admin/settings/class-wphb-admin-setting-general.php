@@ -52,20 +52,20 @@ if ( ! class_exists( 'WPHB_Admin_Setting_General' ) ) {
 						'desc'    => __( 'Allow checkout date when blocked, applicable to search forms except single room', 'wp-hotel-booking' ),
 						'default' => 1,
 					),
-					array(
+					/*array(
 						'type'    => 'checkbox',
 						'id'      => WPHB_Settings::instance()->get_field_name( 'single_purchase' ),
 						'title'   => __( 'Single Purchase', 'wp-hotel-booking' ),
 						'desc'    => __( 'Disable select quantity in Hotel Search page (default: one at a time)', 'wp-hotel-booking' ),
 						'default' => 1,
-					),
-					array(
+					),*/
+					/*array(
 						'type'    => 'checkbox',
 						'id'      => WPHB_Settings::instance()->get_field_name( 'custom_process' ),
 						'title'   => __( 'Custom Process', 'wp-hotel-booking' ),
 						'desc'    => __( 'Choose extra options after select room in search page', 'wp-hotel-booking' ),
 						'default' => 1,
-					),
+					),*/
 					array(
 						'type'    => 'select',
 						'id'      => WPHB_Settings::instance()->get_field_name( 'currency' ),
@@ -110,13 +110,14 @@ if ( ! class_exists( 'WPHB_Admin_Setting_General' ) ) {
 						'id'      => WPHB_Settings::instance()->get_field_name( 'minimum_booking_day' ),
 						'title'   => __( 'Minimum booking nights', 'wp-hotel-booking' ),
 						'default' => 1,
-						'min'     => 0,
+						'min'     => 1,
 						'step'    => 'any',
 					),
 					array(
 						'type'    => 'number',
 						'id'      => WPHB_Settings::instance()->get_field_name( 'tax' ),
-						'title'   => __( 'Tax', 'wp-hotel-booking' ),
+						'title'   => __( 'Tax rates', 'wp-hotel-booking' ),
+						'desc'    => __( 'unit %, set 0 to not calculate tax', 'wp-hotel-booking' ),
 						'default' => 10,
 						'min'     => 0,
 						'step'    => 'any',

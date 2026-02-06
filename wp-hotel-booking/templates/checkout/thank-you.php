@@ -65,7 +65,7 @@ if ( $booking_id && get_post_type( $booking_id ) == 'hb_booking' ) {
 					<th><?php _e( 'Qty', 'wp-hotel-booking' ); ?></th>
 					<?php if ( $has_adult_qty ) : ?>
 					<th><?php _e( 'Adults', 'wp-hotel-booking' ); ?></th>
-					<th><?php _e( 'Childs', 'wp-hotel-booking' ); ?></th>
+					<th><?php _e( 'Children', 'wp-hotel-booking' ); ?></th>
 					<?php endif; ?>
 					<th><?php _e( 'Total', 'wp-hotel-booking' ); ?></th>
 				</tr>
@@ -115,6 +115,9 @@ if ( $booking_id && get_post_type( $booking_id ) == 'hb_booking' ) {
 								<td>
 									<?php echo esc_html( hb_get_order_item_meta( $package->order_item_id, 'qty', true ) ); ?>
 								</td>
+								<?php if ( $has_adult_qty ) : ?>
+									<td colspan="2"></td>
+								<?php endif; ?>
 								<td>
 									<?php echo esc_html( hb_format_price( hb_get_order_item_meta( $package->order_item_id, 'subtotal', true ), hb_get_currency_symbol( $booking->currency ) ) ); ?>
 								</td>

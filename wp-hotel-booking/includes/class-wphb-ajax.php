@@ -33,7 +33,7 @@ class WPHB_Ajax {
 		}
 
 		$ajax_actions = array(
-			'fetch_customer_info'      => true,
+			//'fetch_customer_info'      => true,
 			'place_order'              => true,
 			'load_room_type_galley'    => false,
 			'parse_search_params'      => true,
@@ -55,7 +55,7 @@ class WPHB_Ajax {
 			'remove_coupon_on_order'   => false,
 			'load_other_full_calendar' => false,
 			'dismiss_notice'           => true,
-			'create_pages'             => false,
+			'create_pages'             => true,
 		);
 
 		foreach ( $ajax_actions as $action => $priv ) {
@@ -78,10 +78,16 @@ class WPHB_Ajax {
 
 		if ( ! current_user_can( 'edit_pages' ) || empty( $_POST['page_name'] ) ) {
 			$response['message'] = __( 'Request invalid', 'wp-hotel-booking' );
-			hb_send_json( $response );
+			wp_send_json( $response );
+		}
+
+		if ( ! wp_verify_nonce( $_POST['nonce'] ?? '', 'hb_booking_nonce_action' ) ) {
+			$response['message'] = __( 'Nonce is invalid', 'wp-hotel-booking' );
+			wp_send_json( $response );
 		}
 
 		$page_name = WPHB_Helpers::sanitize_params_submitted( $_POST['page_name'] );
+		$page_type = WPHB_Helpers::sanitize_params_submitted( $_POST['page_type'] );
 
 		if ( $page_name ) {
 			$args = array(
@@ -93,6 +99,10 @@ class WPHB_Ajax {
 			$page_id = wp_insert_post( $args );
 
 			if ( $page_id ) {
+				// set page to settings
+				//hb_settings()->set( $page_type . '_page_id', $page_id );
+				update_option( $page_type, $page_id );
+
 				$response['code']    = 1;
 				$response['message'] = 'create page success';
 				$response['page']    = get_post( $page_id );
@@ -106,7 +116,6 @@ class WPHB_Ajax {
 		}
 
 		wp_send_json( $response );
-		die;
 	}
 
 	/**
@@ -188,12 +197,12 @@ class WPHB_Ajax {
 
 	/**
 	 * Fetch customer information with user email
+	 * @deprecated 2.2.8
 	 */
 	static function fetch_customer_info() {
-		if ( empty( hb_get_request( 'nonce', false ) )
-			|| ! wp_verify_nonce( hb_get_request( 'nonce' ), 'hb_booking_nonce_action' ) ) {
-			die();
-		}
+		_deprecated_function( __METHOD__, '2.2.8' );
+		die();
+		check_ajax_referer( 'wphb_get_customer_info' );
 		$email = hb_get_request( 'email' );
 		$args  = array(
 			'post_type'   => 'hb_booking',
@@ -304,6 +313,16 @@ class WPHB_Ajax {
 	}
 
 	static function remove_coupon() {
+		// Security: Add nonce verification to prevent CSRF
+		if ( ! wp_verify_nonce( $_POST['nonce'] ?? '', 'hb_booking_nonce_action' ) ) {
+			hb_send_json(
+				array(
+					'result'  => 'error',
+					'message' => __( 'Security check failed', 'wp-hotel-booking' ),
+				)
+			);
+		}
+
 		! session_id() && session_start( array( 'read_and_close' => true ) );
 		// delete_transient( 'hb_user_coupon_' . session_id() );
 		WP_Hotel_Booking::instance()->cart->set_customer( 'coupon', null );
@@ -354,6 +373,10 @@ class WPHB_Ajax {
 			$adult_qty      = WPHB_Helpers::get_param( 'adult_qty', 1, 'int' );
 			$child_qty      = WPHB_Helpers::get_param( 'child_qty', 0, 'int' );
 
+			// Check to add extra
+			$hb_optional_quantity_selected = WPHB_Helpers::get_param( 'hb_optional_quantity_selected', [] );
+			$hb_optional_quantity          = WPHB_Helpers::get_param( 'hb_optional_quantity', [] );
+
 			$from_check_dates_room = WPHB_Helpers::get_param( 'from-check-dates-room', 0, 'int' );
 
 			if ( ! $room_id ) {
@@ -365,6 +388,20 @@ class WPHB_Ajax {
 				throw new Exception( __( 'Room ID is not exists.', 'wp-hotel-booking' ) );
 			}
 
+			$available_qty = hotel_booking_get_room_available(
+				$room_id,
+				array(
+					'check_in_date'  => $check_in_date,
+					'check_out_date' => $check_out_date,
+				)
+			);
+			if ( is_wp_error( $available_qty ) ) {
+				throw new Exception( $available_qty->get_error_message() );
+			} elseif ( $qty > $available_qty ) {
+				$message = sprintf( __( 'You can only book up to %d rooms' ), $available_qty );
+				throw new Exception( $message );
+			}
+
 			// Add to cart
 			$params = array(
 				'product_id'     => $room_id,
@@ -374,44 +411,35 @@ class WPHB_Ajax {
 				'child_qty'      => $child_qty,
 			);
 
+			if ( ! empty( $hb_optional_quantity_selected ) && ! empty( $hb_optional_quantity ) ) {
+				foreach ( $hb_optional_quantity_selected as $extra_id => $select ) {
+					$params['hb_optional_quantity'][ $extra_id ]          = $hb_optional_quantity[ $extra_id ];
+					$params['hb_optional_quantity_selected'][ $extra_id ] = 'on';
+				}
+			}
+
 			$cart_item_id = WP_Hotel_Booking::instance()->cart->add_to_cart( $room_id, $params, $qty );
 			if ( ! is_wp_error( $cart_item_id ) ) {
 				$cart_item    = WP_Hotel_Booking::instance()->cart->get_cart_item( $cart_item_id );
 				$room         = $cart_item->product_data;
 				$pageRedirect = WPHB_Settings::instance()->getPageRedirect();
 
-				// Check to add extra
-				$hb_optional_quantity_selected = WPHB_Helpers::get_param( 'hb_optional_quantity_selected', [] );
-				$hb_optional_quantity = WPHB_Helpers::get_param( 'hb_optional_quantity', [] );
 				if ( ! empty( $hb_optional_quantity_selected ) && ! empty( $hb_optional_quantity ) && $cart_item ) {
 					$extra_cart = HB_Extra_Cart::instance();
 					foreach ( $hb_optional_quantity_selected as $extra_id => $select ) {
 						$extra_cart->ajax_added_cart(
 							$cart_item_id,
 							array(
-								'product_id'                    => $room_id,
-								'hb_optional_quantity'          => array( $extra_id => $hb_optional_quantity[ $extra_id ] ),
+								'product_id'           => $room_id,
+								'hb_optional_quantity' => array( $extra_id => $hb_optional_quantity[ $extra_id ] ),
 								'hb_optional_quantity_selected' => array( $extra_id => 'on' ),
-								'check_in_date'                 => $check_in_date,
-								'check_out_date'                => $check_out_date,
+								'check_in_date'        => $check_in_date,
+								'check_out_date'       => $check_out_date,
 							)
 						);
 					}
 				}
-
-				$is_enable_custom_process = (int) get_option( 'tp_hotel_booking_custom_process', 0 );
-				if ( $is_enable_custom_process && ! $from_check_dates_room ) {
-					$res->data->redirect = add_query_arg(
-						array(
-							'is_page_room_extra' => 'select-room-extra',
-							'cart_id'            => $cart_item_id,
-							'room_id'            => $room_id,
-						),
-						hb_get_search_room_url()
-					);
-				} else {
-					$res->data->redirect = $pageRedirect;
-				}
+				$res->data->redirect = $pageRedirect;
 
 				$res->status  = 'success';
 				$res->message = sprintf( '<label class="hb_success_message">%1$s</label>', __( 'Added successfully.', 'wp-hotel-booking' ) );

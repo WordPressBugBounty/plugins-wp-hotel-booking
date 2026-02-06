@@ -1,10 +1,278 @@
 /******/ (() => { // webpackBootstrap
+/******/ 	"use strict";
+/******/ 	var __webpack_modules__ = ({
+
+/***/ "./assets/js/utils.js":
+/*!****************************!*\
+  !*** ./assets/js/utils.js ***!
+  \****************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   addQueryArgs: () => (/* binding */ addQueryArgs),
+/* harmony export */   className: () => (/* binding */ className),
+/* harmony export */   fetchAPI: () => (/* binding */ fetchAPI),
+/* harmony export */   getCurrentURLNoParam: () => (/* binding */ getCurrentURLNoParam),
+/* harmony export */   listenElementCreated: () => (/* binding */ listenElementCreated),
+/* harmony export */   listenElementViewed: () => (/* binding */ listenElementViewed),
+/* harmony export */   onElementReady: () => (/* binding */ onElementReady),
+/* harmony export */   setLoadingEl: () => (/* binding */ setLoadingEl),
+/* harmony export */   showHideEl: () => (/* binding */ showHideEl),
+/* harmony export */   wphbRenderPrice: () => (/* binding */ wphbRenderPrice)
+/* harmony export */ });
+/**
+ * Utils functions
+ * Copy from learnpress
+ *
+ * @param url
+ * @param data
+ * @param functions
+ * @since 1.0.0
+ * @version 1.0.0
+ */
+const className = {
+  hidden: 'wphb-hidden',
+  loading: 'wphb-loading',
+  targetAjax: 'wphb-target-ajax'
+};
+const fetchAPI = (url, data = {}, functions = {}) => {
+  if ('function' === typeof functions.before) {
+    functions.before();
+  }
+  fetch(url, {
+    method: 'GET',
+    ...data
+  }).then(response => response.json()).then(response => {
+    if ('function' === typeof functions.success) {
+      functions.success(response);
+    }
+  }).catch(err => {
+    if ('function' === typeof functions.error) {
+      functions.error(err);
+    }
+  }).finally(() => {
+    if ('function' === typeof functions.completed) {
+      functions.completed();
+    }
+  });
+};
+
+/**
+ * Get current URL without params.
+ *
+ * @since 4.2.5.1
+ */
+const getCurrentURLNoParam = () => {
+  let currentUrl = window.location.href;
+  const hasParams = currentUrl.includes('?');
+  if (hasParams) {
+    currentUrl = currentUrl.split('?')[0];
+  }
+  return currentUrl;
+};
+const addQueryArgs = (endpoint, args) => {
+  const url = new URL(endpoint);
+  Object.keys(args).forEach(arg => {
+    url.searchParams.set(arg, args[arg]);
+  });
+  return url;
+};
+
+/**
+ * Listen element viewed.
+ *
+ * @param el
+ * @param callback
+ * @since 4.2.5.8
+ */
+const listenElementViewed = (el, callback) => {
+  const observerSeeItem = new IntersectionObserver(function (entries) {
+    for (const entry of entries) {
+      if (entry.isIntersecting) {
+        callback(entry);
+      }
+    }
+  });
+  observerSeeItem.observe(el);
+};
+
+/**
+ * Listen element created.
+ *
+ * @param callback
+ * @since 4.2.5.8
+ */
+const listenElementCreated = callback => {
+  const observerCreateItem = new MutationObserver(function (mutations) {
+    mutations.forEach(function (mutation) {
+      if (mutation.addedNodes) {
+        mutation.addedNodes.forEach(function (node) {
+          if (node.nodeType === 1) {
+            callback(node);
+          }
+        });
+      }
+    });
+  });
+  observerCreateItem.observe(document, {
+    childList: true,
+    subtree: true
+  });
+  // End.
+};
+
+/**
+ * Listen element created.
+ *
+ * @param selector
+ * @param callback
+ * @since 4.2.7.1
+ */
+const onElementReady = (selector, callback) => {
+  const element = document.querySelector(selector);
+  if (element) {
+    callback(element);
+    return;
+  }
+  const observer = new MutationObserver((mutations, obs) => {
+    const element = document.querySelector(selector);
+    if (element) {
+      obs.disconnect();
+      callback(element);
+    }
+  });
+  observer.observe(document.documentElement, {
+    childList: true,
+    subtree: true
+  });
+};
+
+// status 0: hide, 1: show
+const showHideEl = (el, status = 0) => {
+  if (!el) {
+    return;
+  }
+  if (!status) {
+    el.classList.add(className.hidden);
+  } else {
+    el.classList.remove(className.hidden);
+  }
+};
+
+// status 0: hide, 1: show
+const setLoadingEl = (el, status) => {
+  if (!el) {
+    return;
+  }
+  if (!status) {
+    el.classList.remove(className.loading);
+  } else {
+    el.classList.add(className.loading);
+  }
+};
+const wphbRenderPrice = price => {
+  const currencySymbol = hotel_settings.currency_symbol || '';
+  const currencyPosition = hotel_settings.currency_position || 'left';
+  price = wphbRenderPriceNumber(price);
+  switch (currencyPosition) {
+    case 'left':
+      price = currencySymbol + price;
+      break;
+    case 'right':
+      price = price + currencySymbol;
+      break;
+    case 'left_with_space':
+      price = currencySymbol + ' ' + price;
+      break;
+    case 'right_with_space':
+      price = price + ' ' + currencySymbol;
+      break;
+    default:
+      break;
+  }
+  return price;
+};
+const wphbRenderPriceNumber = price => {
+  const numberDecimals = hotel_settings.number_decimal || 0;
+  const thousandsSeparator = hotel_settings.thousands_separator || '';
+  price = (price / 1).toFixed(numberDecimals);
+  price = price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, thousandsSeparator);
+  return price;
+};
+
+
+/***/ })
+
+/******/ 	});
+/************************************************************************/
+/******/ 	// The module cache
+/******/ 	var __webpack_module_cache__ = {};
+/******/ 	
+/******/ 	// The require function
+/******/ 	function __webpack_require__(moduleId) {
+/******/ 		// Check if module is in cache
+/******/ 		var cachedModule = __webpack_module_cache__[moduleId];
+/******/ 		if (cachedModule !== undefined) {
+/******/ 			return cachedModule.exports;
+/******/ 		}
+/******/ 		// Create a new module (and put it into the cache)
+/******/ 		var module = __webpack_module_cache__[moduleId] = {
+/******/ 			// no module.id needed
+/******/ 			// no module.loaded needed
+/******/ 			exports: {}
+/******/ 		};
+/******/ 	
+/******/ 		// Execute the module function
+/******/ 		__webpack_modules__[moduleId](module, module.exports, __webpack_require__);
+/******/ 	
+/******/ 		// Return the exports of the module
+/******/ 		return module.exports;
+/******/ 	}
+/******/ 	
+/************************************************************************/
+/******/ 	/* webpack/runtime/define property getters */
+/******/ 	(() => {
+/******/ 		// define getter functions for harmony exports
+/******/ 		__webpack_require__.d = (exports, definition) => {
+/******/ 			for(var key in definition) {
+/******/ 				if(__webpack_require__.o(definition, key) && !__webpack_require__.o(exports, key)) {
+/******/ 					Object.defineProperty(exports, key, { enumerable: true, get: definition[key] });
+/******/ 				}
+/******/ 			}
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/hasOwnProperty shorthand */
+/******/ 	(() => {
+/******/ 		__webpack_require__.o = (obj, prop) => (Object.prototype.hasOwnProperty.call(obj, prop))
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/make namespace object */
+/******/ 	(() => {
+/******/ 		// define __esModule on exports
+/******/ 		__webpack_require__.r = (exports) => {
+/******/ 			if(typeof Symbol !== 'undefined' && Symbol.toStringTag) {
+/******/ 				Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+/******/ 			}
+/******/ 			Object.defineProperty(exports, '__esModule', { value: true });
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/************************************************************************/
+var __webpack_exports__ = {};
+// This entry needs to be wrapped in an IIFE because it needs to be isolated against other modules in the chunk.
+(() => {
 /*!************************************************!*\
   !*** ./assets/js/frontend/hotel-booking-v2.js ***!
   \************************************************/
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var _utils_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../utils.js */ "./assets/js/utils.js");
 /** search api */
+
 const urlCurrent = document.location.href;
 const urlPageSearch = hotel_settings?.url_page_search;
+const urlPageRooms = hotel_settings?.url_page_rooms;
 let filterRooms = JSON.parse(window.localStorage.getItem('wphb_filter_rooms')) || {};
 let firstLoad = true;
 const hotelBookingSearchNode = document.querySelector('.hotel-booking-search');
@@ -219,6 +487,13 @@ const bookingRoomsPages = formsCheck => {
   if (formBooking.length == 0) return;
   const checkinDate = formsCheck.querySelector('input[name="check_in_date"]')?.value;
   const checkoutDate = formsCheck.querySelector('input[name="check_out_date"]')?.value;
+  const formSearchPage = document.querySelector('#hb-form-search-page');
+  let adults = 1,
+    maxChild = 0;
+  if (formSearchPage) {
+    adults = formSearchPage.querySelector('select[name="adults_capacity"]') ? formSearchPage.querySelector('select[name="adults_capacity"]').value : 1;
+    maxChild = formSearchPage.querySelector('select[name="max_child"]') ? formSearchPage.querySelector('select[name="max_child"]').value : 0;
+  }
   const submit = async (form, btn = false, numRoom, roomID) => {
     const extraData = [];
     const hotelOption = form.querySelectorAll('input.hb_optional_quantity_selected');
@@ -245,7 +520,9 @@ const bookingRoomsPages = formsCheck => {
           checkinDate,
           checkoutDate,
           numRoom,
-          extraData
+          extraData,
+          adults,
+          maxChild
         }
       });
       const {
@@ -413,15 +690,16 @@ const checkAvailableRooms = () => {
       }
     }
   }
-  const forms = document.querySelectorAll('form[class^="hb-search-form"]:not(#hb-form-search-page)');
+  const forms = document.querySelectorAll('form[name="hb-search-form"]:not(#hb-form-search-page)');
   forms.length > 0 && forms.forEach(form => {
     form.addEventListener('submit', function (e) {
       e.preventDefault();
       const checkinDate = form.querySelector('input[name="check_in_date"]').value;
       const checkoutDate = form.querySelector('input[name="check_out_date"]').value;
-      const countAdults = form.querySelector('select[name="adults_capacity"]') ? form.querySelector('select[name="adults_capacity"]').value : 0;
-      const maxChild = form.querySelector('select[name="max_child"]') ? form.querySelector('select[name="max_child"]').value : 0;
+      const countAdults = form.querySelector('[name="adults_capacity"]') ? form.querySelector('[name="adults_capacity"]').value : 0;
+      const maxChild = form.querySelector('[name="max_child"]') ? form.querySelector('[name="max_child"]').value : 0;
       const paged = form.querySelector('input[name="paged"]') ? form.querySelector('input[name="paged"]').value : 1;
+      const room_qty = form.querySelector('[name="number-of-rooms"]') ? form.querySelector('[name="number-of-rooms"]').value : 1;
       if (checkinDate === '' || checkoutDate === '') {
         alert(' Please select check in and check out date and search again! ');
         return;
@@ -431,12 +709,13 @@ const checkAvailableRooms = () => {
         check_out_date: checkoutDate,
         adults: countAdults,
         max_child: maxChild,
-        paged: paged
+        paged: paged,
+        room_qty
       };
       window.localStorage.setItem('wphb_filter_rooms', JSON.stringify(data));
       const urlPush = wphbAddQueryArgs(document.location, data);
       const urlString = urlPush.search;
-      window.location.href = urlPageSearch + urlString;
+      window.location.href = urlPageRooms + urlString;
     });
   });
 };
@@ -469,35 +748,6 @@ const toggleExtravalue = () => {
       extra.value = select.value;
     });
   });
-};
-const renderPrice = price => {
-  const currencySymbol = hotel_settings.currency_symbol || '';
-  const currencyPosition = hotel_settings.currency_position || 'left';
-  price = renderPriceNumber(price);
-  switch (currencyPosition) {
-    case 'left':
-      price = currencySymbol + price;
-      break;
-    case 'right':
-      price = price + currencySymbol;
-      break;
-    case 'left_with_space':
-      price = currencySymbol + ' ' + price;
-      break;
-    case 'right_with_space':
-      price = price + ' ' + currencySymbol;
-      break;
-    default:
-      break;
-  }
-  return price;
-};
-const renderPriceNumber = price => {
-  const numberDecimals = hotel_settings.number_decimal || 0;
-  const thousandsSeparator = hotel_settings.thousands_separator || '';
-  price = (price / 1).toFixed(numberDecimals);
-  price = price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, thousandsSeparator);
-  return price;
 };
 const priceSlider = () => {
   const priceFields = document.querySelectorAll('.hb-price-field');
@@ -540,8 +790,8 @@ const priceSlider = () => {
       }
       minPriceNode.value = parseInt(minValue);
       maxPriceNode.value = parseInt(maxValue);
-      priceField.querySelector('.min').innerHTML = renderPrice(minValue);
-      priceField.querySelector('.max').innerHTML = renderPrice(maxValue);
+      priceField.querySelector('.min').innerHTML = _utils_js__WEBPACK_IMPORTED_MODULE_0__.wphbRenderPrice(minValue);
+      priceField.querySelector('.max').innerHTML = _utils_js__WEBPACK_IMPORTED_MODULE_0__.wphbRenderPrice(maxValue);
     });
     const applyBtn = priceField.querySelector('button.apply');
 
@@ -684,7 +934,7 @@ const hbFilterSelection = () => {
       priceSliderNode.noUiSlider.on('update', function (values, handle, unencoded) {
         const minPrice = parseInt(values[0]);
         const maxPrice = parseInt(values[1]);
-        changeSelectedField('price', minPrice + '-' + maxPrice, renderPrice(minPrice) + '-' + renderPrice(maxPrice));
+        changeSelectedField('price', minPrice + '-' + maxPrice, _utils_js__WEBPACK_IMPORTED_MODULE_0__.wphbRenderPrice(minPrice) + '-' + _utils_js__WEBPACK_IMPORTED_MODULE_0__.wphbRenderPrice(maxPrice));
       });
     }
   }
@@ -880,12 +1130,117 @@ const sortBy = () => {
     });
   });
 };
+const initNumberInputs = () => {
+  const numberFields = document.querySelectorAll('.hb-form-number-input');
+  if (numberFields.length < 1) {
+    return;
+  }
+  numberFields.forEach(field => {
+    const input = field.querySelector('input[type="number"]');
+    const dropdown = field.querySelector('.hb-form-field-list');
+    const valueDisplay = field.querySelector('.hb-number-field-value');
+    const btnUp = field.querySelector('.hb-goUp');
+    const btnDown = field.querySelector('.hb-goDown');
+    const minValue = parseInt(input.getAttribute('min')) || 0;
+
+    // Update display and input value
+    const updateDisplay = value => {
+      currentValue = value;
+      input.value = value;
+      valueDisplay.textContent = value;
+      // Disable down button if at minimum
+      if (currentValue <= minValue) {
+        btnDown.style.opacity = '0.5';
+        btnDown.style.cursor = 'not-allowed';
+      } else {
+        btnDown.style.opacity = '1';
+        btnDown.style.cursor = 'pointer';
+      }
+    };
+    // Initialize value display
+    let currentValue = parseInt(input.value) || minValue;
+    updateDisplay(currentValue);
+
+    // Toggle dropdown on input click
+    input.addEventListener('click', e => {
+      e.stopPropagation();
+
+      // Close all other dropdowns
+      document.querySelectorAll('.hb-form-field-list').forEach(dd => {
+        if (dd !== dropdown) {
+          dd.classList.remove('active');
+        }
+      });
+
+      // Toggle current dropdown
+      dropdown.classList.toggle('active');
+    });
+
+    // Increase value
+    btnUp.addEventListener('click', e => {
+      e.stopPropagation();
+      currentValue++;
+      updateDisplay(currentValue);
+    });
+
+    // Decrease value
+    btnDown.addEventListener('click', e => {
+      e.stopPropagation();
+      if (currentValue > minValue) {
+        currentValue--;
+        updateDisplay(currentValue);
+      }
+    });
+  });
+};
+const show_form_coupon = () => {
+  const couponToggle = document.querySelector('.thim-hb-show-coupon-form');
+  const couponFormWrapper = document.querySelector('.thim-hb-coupon-form-wrapper');
+  if (couponToggle && couponFormWrapper) {
+    couponToggle.addEventListener('click', function (e) {
+      e.preventDefault();
+      if (couponFormWrapper.style.display === 'none' || getComputedStyle(couponFormWrapper).display === 'none') {
+        couponFormWrapper.style.display = 'block';
+        couponToggle.textContent = couponToggle.dataset.hideText || 'Hide coupon form';
+      } else {
+        couponFormWrapper.style.display = 'none';
+        couponToggle.textContent = couponToggle.dataset.showText || 'Click here to enter your code';
+      }
+    });
+  }
+};
+// Close dropdown when clicking outside
+document.addEventListener('click', e => {
+  if (!e.target.closest('.hb-form-number')) {
+    document.querySelectorAll('.hb-form-field-list').forEach(dropdown => {
+      dropdown.classList.remove('active');
+    });
+  }
+});
+document.addEventListener('keyup', e => {
+  let target = e.target;
+  if (target.closest('.hb-form-number-input') && target.tagName === 'INPUT') {
+    let container = target.closest('.hb-form-number-input');
+    if (container.querySelector('.hb-number-field-value')) {
+      container.querySelector('.hb-number-field-value').innerText = parseInt(target.value);
+    }
+  }
+});
+// Initialize on DOM ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initNumberInputs);
+} else {
+  initNumberInputs();
+}
+// Expose reinit function for dynamically added fields
+window.hbReinitNumberInputs = initNumberInputs;
 document.addEventListener('DOMContentLoaded', () => {
   searchRoomsPages(); //use in page search room
   addExtraToCart();
   addtocartElementor();
   checkAvailableRooms(); // use multi form search will redirect to page search room with data valid :
   processCheckout();
+  show_form_coupon();
   if (hotelBookingSearchNode && hotel_settings && hotel_settings.is_page_search) {
     priceSlider();
     rating();
@@ -896,6 +1251,8 @@ document.addEventListener('DOMContentLoaded', () => {
     sortBy();
   }
 });
+})();
+
 /******/ })()
 ;
 //# sourceMappingURL=hotel-booking-v2.js.map

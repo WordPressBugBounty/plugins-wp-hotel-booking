@@ -48,31 +48,17 @@ defined( 'ABSPATH' ) || exit;
 // }
 
 if ( ! function_exists( 'hb_get_max_capacity_of_rooms' ) ) {
+	/**
+	 * @deprecated 2.2.4
+	 *
+	 * It handles query db to get max capacity of rooms and set options of tag Select, don't need
+	 */
 	function hb_get_max_capacity_of_rooms() {
-		static $max = null;
-
-		$args      = array(
-			'post_type'      => 'hb_room',
-			'posts_per_page' => - 1,
-		);
-		$the_query = new WP_Query( $args );
-
-		if ( $the_query->have_posts() ) :
-			while ( $the_query->have_posts() ) :
-				$the_query->the_post();
-				$adult = get_post_meta( get_the_ID(), '_hb_room_capacity_adult', true );
-				if ( intval( $adult ) > $max ) {
-					$max = $adult;
-				}
-			endwhile;
-		endif;
-		wp_reset_postdata();
-
-		if ( ! $max ) {
-			global $wpdb;
-			$results = $wpdb->get_results( "SELECT MAX(meta_value) as max FROM $wpdb->postmeta WHERE meta_key = '_hb_room_capacity_adult'", ARRAY_A );
-			$max     = $results[0]['max'];
-		}
+		return 100;
+		global $wpdb;
+		//$max = $wpdb->get_var( "SELECT MAX(meta_value) as max FROM $wpdb->postmeta WHERE meta_key = '_hb_room_capacity_adult'" );
+		//$max = ! empty( $max ) ? (int) $max : 0;
+		$max = 20;
 
 		return apply_filters( 'get_max_capacity_of_rooms', $max );
 	}
@@ -111,6 +97,9 @@ if ( ! function_exists( 'hb_get_max_capacity_of_rooms' ) ) {
 // }
 
 if ( ! function_exists( 'hb_get_min_capacity_of_rooms' ) ) {
+	/**
+	 * @deprecated 2.2.5
+	 */
 	function hb_get_min_capacity_of_rooms() {
 		static $min = null;
 
@@ -179,10 +168,15 @@ if ( ! function_exists( 'hb_get_min_capacity_of_rooms' ) ) {
 // }
 if ( ! function_exists( 'hb_get_capacity_of_rooms' ) ) {
 	// get array search
+	/**
+	 * @deprecated 2.2.5
+	 */
 	function hb_get_capacity_of_rooms() {
-		global $hb_settings;
-		$max_adult = $hb_settings->get( 'max_adults_all_room' );
-		$return    = array();
+		global $wpdb;
+		//$max_adult = (int) $wpdb->get_var( "SELECT MAX(meta_value) as max FROM $wpdb->postmeta WHERE meta_key = '_hb_room_capacity_adult'" ) ?: 1;
+		$max_adult = 20;
+
+		$return = array();
 		if ( $max_adult ) {
 			for ( $i = 1; $i <= $max_adult; $i ++ ) {
 				$return[ $i ] = array(
@@ -482,7 +476,7 @@ if ( ! function_exists( 'hb_dropdown_child_per_room' ) ) {
 		);
 		$max_child = hb_get_max_child_of_rooms();
 		$output    = '<select name="' . $args['name'] . '">';
-		$output    .= '<option value="0">' . __( 'Select', 'wp-hotel-booking' ) . '</option>';
+		$output   .= '<option value="0">' . __( 'Select', 'wp-hotel-booking' ) . '</option>';
 		if ( $max_child > 0 ) {
 			for ( $i = 1; $i <= $max_child; $i ++ ) {
 				$output .= sprintf( '<option value="%1$d"%2$s>%1$d</option>', $i, $args['selected'] == $i ? ' selected="selected"' : '' );
@@ -1135,7 +1129,7 @@ if ( ! function_exists( 'hb_get_tax_settings' ) ) {
 
 	function hb_get_tax_settings() {
 		$settings = WPHB_Settings::instance();
-		$tax = $settings->get( 'tax' );
+		$tax      = $settings->get( 'tax' );
 		if ( $tax ) {
 			$tax = (float) $tax / 100;
 		}
@@ -1480,12 +1474,12 @@ if ( ! function_exists( 'hb_format_price' ) ) {
 		}
 
 		$price_format = $before
-		                . number_format(
-			                $price,
-			                $price_number_of_decimal,
-			                $price_decimals_separator,
-			                $price_thousands_separator
-		                ) . $after;
+						. number_format(
+							$price,
+							$price_number_of_decimal,
+							$price_decimals_separator,
+							$price_thousands_separator
+						) . $after;
 
 		return $override ? apply_filters( 'hb_price_format', $price_format, $price, $with_currency ) : $price_format;
 	}
@@ -1676,23 +1670,20 @@ if ( ! function_exists( 'hb_format_price' ) ) {
 if ( ! function_exists( 'hb_search_rooms' ) ) {
 	function hb_search_rooms( $args = array() ) {
 		global $wpdb;
-		$adults_term = hb_get_request( 'adults', 0 );
-		$adults      = $adults_term ? get_term_meta( $adults_term, 'hb_max_number_of_adults', true ) : hb_get_min_capacity_of_rooms();
-		if ( ! $adults ) {
-			$adults = $adults_term ? (int) get_option( 'hb_taxonomy_capacity_' . $adults_term ) : 0;
-		}
+		$adults    = hb_get_request( 'adults', 0 );
 		$max_child = hb_get_request( 'max_child', 0 );
 
 		$args   = wp_parse_args(
 			$args,
 			array(
-				'check_in_date'  => date( 'm/d/Y' ),
-				'check_out_date' => date( 'm/d/Y' ),
+				'check_in_date'  => gmdate( 'm/d/Y' ),
+				'check_out_date' => gmdate( 'm/d/Y' ),
 				'adults'         => $adults,
 				'max_child'      => 0,
+				'room_qty'       => 1,
 			)
 		);
-		$adults = $args['adults'];
+		$adults = $args['adults'] ?? 1;
 
 		$check_in_time          = strtotime( $args['check_in_date'] );
 		$check_out_time         = strtotime( $args['check_out_date'] );
@@ -1763,7 +1754,7 @@ if ( ! function_exists( 'hb_search_rooms' ) ) {
 		$group_by = ' GROUP BY rooms.post_name HAVING available_rooms > 0';
 		$order_by = ' ORDER BY rooms.post_title ASC';
 
-		if ( isset( $args['min_price'] ) && $args['max_price'] && $args['min_price'] !== '' && $args['max_price'] !== '' ) {
+		/*if ( isset( $args['min_price'] ) && $args['max_price'] && $args['min_price'] !== '' && $args['max_price'] !== '' ) {
 			$sql .= $wpdb->prepare(
 				" LEFT JOIN {$wpdb->postmeta} AS pm4 ON pm4.post_id = rooms.ID AND pm4.meta_key = %s",
 				'hb_price'
@@ -1774,7 +1765,7 @@ if ( ! function_exists( 'hb_search_rooms' ) ) {
 				$args['min_price'],
 				$args['max_price']
 			);
-		}
+		}*/
 
 		if ( isset( $args['rating'] ) && $args['rating'] !== '' ) {
 			$rating = explode( ',', $args['rating'] );
@@ -1827,13 +1818,13 @@ if ( ! function_exists( 'hb_search_rooms' ) ) {
 
 		if ( isset( $args['room_type'] ) && $args['room_type'] !== '' ) {
 			$roomTypes = explode( ',', $args['room_type'] );
-			$roomTypes = array_map( 'absint', $roomTypes);
+			$roomTypes = array_map( 'absint', $roomTypes );
 
-			$sql   .= " INNER JOIN $wpdb->term_relationships AS r_term ON rooms.ID = r_term.object_id";
-			$sql   .= " INNER JOIN $wpdb->term_taxonomy AS tx ON r_term.term_taxonomy_id = tx.term_taxonomy_id";
+			$sql            .= " INNER JOIN $wpdb->term_relationships AS r_term ON rooms.ID = r_term.object_id";
+			$sql            .= " INNER JOIN $wpdb->term_taxonomy AS tx ON r_term.term_taxonomy_id = tx.term_taxonomy_id";
 			$term_ids_format = join( ',', $roomTypes );
-			$where .= " AND tx.term_id IN ($term_ids_format)";
-			$where .= $wpdb->prepare( ' AND tx.taxonomy = %s', 'hb_room_type' );
+			$where          .= " AND tx.term_id IN ($term_ids_format)";
+			$where          .= $wpdb->prepare( ' AND tx.taxonomy = %s', 'hb_room_type' );
 		}
 
 		if ( $args['sort_by'] === 'date-desc' ) {
@@ -1860,6 +1851,8 @@ if ( ! function_exists( 'hb_search_rooms' ) ) {
 		if ( $search = $wpdb->get_results( $query ) ) {
 			$allow_checkout_date_blocked = get_option( 'tp_hotel_booking_allow_checkout_date_blocked' );
 
+			$min_price = ( isset( $args['min_price'] ) && $args['min_price'] !== '' ) ? (float) $args['min_price'] : 0;
+			$max_price = ( isset( $args['max_price'] ) && $args['max_price'] !== '' ) ? (float) $args['max_price'] : 0;
 			foreach ( $search as $k => $p ) {
 				$blocked_id = get_post_meta( $p->ID, 'hb_blocked_id', true );
 				if ( ! empty( $blocked_id ) ) {
@@ -1881,19 +1874,27 @@ if ( ! function_exists( 'hb_search_rooms' ) ) {
 					}
 				}
 
-				$room                        = WPHB_Room::instance(
+				$room = WPHB_Room::instance(
 					$p,
 					array(
 						'check_in_date'  => date( 'm/d/Y', $check_in_date_to_time ),
 						'check_out_date' => date( 'm/d/Y', $check_out_date_to_time ),
-						'quantity'       => 1,
+						'quantity'       => $args['room_qty'],
 					)
 				);
+
+				$room_avg_price = $room->get_avg_price();
+				// filter price
+				if ( $min_price >= 0 && $max_price > 0 && ( $room_avg_price < $min_price || $room_avg_price > $max_price ) ) {
+					unset( $search[ $k ] );
+					continue;
+				}
+
 				$room->post->available_rooms = (int) $p->available_rooms;
 
 				$room = apply_filters( 'hotel_booking_query_search_parser', $room, $args );
 
-				if ( $room && $room->post->available_rooms > 0 ) {
+				if ( $room && $room->post->available_rooms > 0 && $room->post->available_rooms >= $args['room_qty'] ) {
 					$results[ $k ] = $room;
 				}
 			}
@@ -2088,7 +2089,7 @@ if ( ! function_exists( 'hb_maybe_modify_page_content' ) ) {
 		global $post;
 		global $hb_settings;
 		if ( is_page() && ( $post->ID == hb_get_page_id( 'search' ) ||
-		                    ( has_shortcode( $content, 'hotel_booking' ) && has_shortcode( $content, 'hotel_booking_filter' ) ) ) ) {
+							( has_shortcode( $content, 'hotel_booking' ) && has_shortcode( $content, 'hotel_booking_filter' ) ) ) ) {
 
 			// params search result
 			$page       = hb_get_request( 'hotel-booking' );
@@ -2107,7 +2108,7 @@ if ( ! function_exists( 'hb_maybe_modify_page_content' ) ) {
 	}
 }
 
-add_filter( 'the_content', 'hb_maybe_modify_page_content' );
+// add_filter( 'the_content', 'hb_maybe_modify_page_content' );
 
 /**
  * Init some task when wp init
@@ -2538,7 +2539,7 @@ if ( ! function_exists( 'hb_get_url' ) ) {
 			$query_str = '?hotel-booking-params=' . base64_encode( wp_json_encode( $params ) );
 		}
 
-		return apply_filters( 'hb_get_url', hb_get_page_permalink( 'search' ) . $query_str, hb_get_page_id( 'search' ), $params );
+		return apply_filters( 'hb_get_url', hb_get_page_permalink( 'rooms' ) . $query_str, hb_get_page_id( 'rooms' ), $params );
 	}
 }
 
@@ -2863,12 +2864,12 @@ if ( ! function_exists( 'tp_hotel_booking_pages_required' ) ) {
 					'id'      => 'tp_hotel_booking_rooms_page_id',
 					'content' => '[' . apply_filters( 'hotel_booking_rooms_shortcode_tag', 'hotel_booking_rooms' ) . ']',
 				),
-				'search_page_id'        => array(
+				/*'search_page_id'        => array(
 					'name'    => __( 'Search Page', 'wp-hotel-booking' ),
 					'slug'    => 'hotel-search',
 					'id'      => 'tp_hotel_booking_search_page_id',
 					'content' => '[' . apply_filters( 'hotel_booking_search_shortcode_tag', 'hotel_booking' ) . ']',
-				),
+				),*/
 				'checkout_page_id'      => array(
 					'name'    => __( 'Checkout Page', 'wp-hotel-booking' ),
 					'slug'    => 'hotel-checkout',

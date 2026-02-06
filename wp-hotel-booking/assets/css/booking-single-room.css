@@ -25,24 +25,21 @@
 	color: #fff;
 }
 
-.hb-booking-room-form-head {
-	text-align: center;
+.hb-booking-room-form-head p { /* title booking form */
+	margin: 0 0 20px 0;
+	font-size: 20px;
+	font-weight: 600;
 }
 
 .hb-booking-room-form-head h2 {
 	margin: 0;
 	padding: 10px;
 	text-transform: uppercase;
-	text-align: center;
 }
 
 .hb-booking-room-form-head > * {
 	font-size: 16px;
 	line-height: 1.6em;
-}
-
-.single-hb_room.elementor-default :not(.tingle-modal) .flatpickr-calendar {
-	margin-top: -30px;
 }
 
 .tingle-modal__close {
@@ -93,8 +90,7 @@
 
 /* preview rooms  */
 .hb_single_room #hb_room_images{
-	margin-bottom: 20px;
-    float: left;
+	margin-bottom: 30px;
     width: 100%;
     position: relative;
 	overflow: hidden;
@@ -102,8 +98,8 @@
 
 .hb_single_room #hb_room_images .room-preview{
 	position: absolute;
-	width:40px;
-	height:40px;
+	width: 40px;
+	height: 40px;
 	right: 10px;
 	top: 10px;
 	z-index: 10;
@@ -117,6 +113,7 @@
 .hb_single_room #hb_room_images img{
 	display: block;
     width: 100%;
+	max-width: 100% !important;
 	max-height: 700px;
 	object-fit: cover;
 	box-shadow: none;

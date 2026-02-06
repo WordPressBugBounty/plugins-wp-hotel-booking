@@ -98,7 +98,7 @@
     display: flex;
     flex-direction: column;
 }
-.hb-search-results .hb-page-search-room-results .hb_addition_package_extra a.hb_package_toggle {
+.hb-search-results .hb-page-search-room-results .hb_addition_package_extra .hb_package_toggle {
     font-size: 16px;
 }
 .hb-search-results .hb-page-search-room-results .hb_addition_package_extra .hb_addition_packages {
@@ -202,6 +202,10 @@
 .hb-addition-information {
     position: relative;
     margin-bottom: 40px;
+}
+
+.hb-payment-form h4, .hb-addition-information h4 {
+    margin-bottom: 20px;
 }
 
 .hb-order-new-customer .hb-form-field .hb-form-field-input select, .hb-order-new-customer .hb-form-field .hb-form-field-input input {
@@ -322,8 +326,6 @@
 
 .hb_add_to_cart.hb_loading {
     opacity: 0.5;
-    -ms-filter: progid:DXImageTransform.Microsoft.Alpha(opacity=50);
-    filter: alpha(opacity=50);
 }
 
 /** Hotel booking carousel slider **/
@@ -484,10 +486,14 @@
     border-bottom: 1px solid rgba(255, 255, 255, 0.3);
 }
 
-.rooms .hb_room .price span.unit {
+.rooms .hb_room .price span.unit, .rooms .hb_room .price span.tax-text {
     font-size: 14px;
     font-weight: 400;
     color: #4f4f4f;
+}
+
+.rooms .hb_room .price span.tax-text {
+    display: none;
 }
 
 .rooms .hb_room .price span.unit:before {
@@ -549,54 +555,55 @@
 }
 
 /** Single rooms **/
-.hb_single_room .title h1 {
+.single-hb_room .title h1 {
     margin: 0 0 20px;
     clear: none;
 }
 
-.hb_single_room .title h1 a {
+.single-hb_room .title h1 a {
     margin: 10px 0;
     color: var(--hb-heading, #111);
 }
 
-.hb_single_room .price {
-    float: right;
-    font-weight: 600;
+.single-hb_room .price {
     font-size: 30px;
     line-height: 1;
+    font-weight: 600;
     color: var(--hb-primary, #ffb606);
+    float: right;
 }
 
-.hb_single_room .price span.title-price {
+.single-hb_room .price span.title-price {
     margin-right: 5px;
-    color: var(--hb-text, #5d5d5d);
+}
+
+.single-hb_room .price span.title-price, .single-hb_room .price span.unit {
     font-size: var(--hb-font-size-base, 16px);
+    color: var(--hb-text, #5d5d5d);
     font-weight: 400;
 }
 
-.hb_single_room .price span.unit {
-    font-size: var(--hb-font-size-base, 16px);
+.single-hb_room .price span.tax-text {
+    font-size: 13px;
     font-weight: 400;
     color: var(--hb-text, #5d5d5d);
 }
 
-.hb_single_room .price span.unit:before {
+.single-hb_room .price span.unit:before {
     content: '/';
 }
 
 /* old camera gallery */
-.hb_single_room .hb_room_gallery .camera_thumbs .camera_nextThumbs,
-.hb_single_room .hb_room_gallery .camera_thumbs .camera_prevThumbs {
+.single-hb_room .hb_room_gallery .camera_thumbs .camera_nextThumbs,
+.single-hb_room .hb_room_gallery .camera_thumbs .camera_prevThumbs {
     top: 10px;
     bottom: 0;
     opacity: 0;
-    -ms-filter: progid:DXImageTransform.Microsoft.Alpha(opacity=0);
-    filter: alpha(opacity=0);
     -webkit-transition: all 0.3s;
     transition: all 0.3s;
 }
 
-.hb_single_room .hb_room_gallery .camera_thumbs .camera_prevThumbs {
+.single-hb_room .hb_room_gallery .camera_thumbs .camera_prevThumbs {
     left: 2px;
     transform: translate(10px, 0);
     -webkit-transform: translate(10px, 0);
@@ -605,7 +612,7 @@
     -o-transform: translate(10px, 0);
 }
 
-.hb_single_room .hb_room_gallery .camera_thumbs .camera_nextThumbs {
+.single-hb_room .hb_room_gallery .camera_thumbs .camera_nextThumbs {
     right: 2px;
     transform: translate(-10px, 0);
     -webkit-transform: translate(-10px, 0);
@@ -614,11 +621,9 @@
     -o-transform: translate(-10px, 0);
 }
 
-.hb_single_room .hb_room_gallery .camera_thumbs:hover .camera_nextThumbs,
-.hb_single_room .hb_room_gallery .camera_thumbs:hover .camera_prevThumbs {
+.single-hb_room .hb_room_gallery .camera_thumbs:hover .camera_nextThumbs,
+.single-hb_room .hb_room_gallery .camera_thumbs:hover .camera_prevThumbs {
     opacity: 1;
-    -ms-filter: progid:DXImageTransform.Microsoft.Alpha(opacity=100);
-    filter: alpha(opacity=100);
     transform: translate(0, 0);
     -webkit-transform: translate(0, 0);
     -moz-transform: translate(0, 0);
@@ -626,19 +631,19 @@
     -o-transform: translate(0, 0);
 }
 
-.hb_single_room .hb_room_gallery .camera_thumbs .camera_thumbs_cont {
+.single-hb_room .hb_room_gallery .camera_thumbs .camera_thumbs_cont {
     background: transparent;
     width: auto;
     margin: 0 -6px;
 }
 
-.hb_single_room .hb_room_gallery .camera_thumbs .camera_thumbs_cont ul {
+.single-hb_room .hb_room_gallery .camera_thumbs .camera_thumbs_cont ul {
     padding: 0;
     overflow: hidden;
     max-height: 130px;
 }
 
-.hb_single_room .hb_room_gallery .camera_thumbs .camera_thumbs_cont ul li {
+.single-hb_room .hb_room_gallery .camera_thumbs .camera_thumbs_cont ul li {
     display: inline-block;
     float: none;
     padding: 0;
@@ -650,7 +655,7 @@
     position: relative;
 }
 
-.hb_single_room .hb_room_gallery .camera_thumbs .camera_thumbs_cont ul li:before {
+.single-hb_room .hb_room_gallery .camera_thumbs .camera_thumbs_cont ul li:before {
     content: '';
     position: absolute;
     top: 0;
@@ -666,62 +671,62 @@
     transition: all 0.3s;
 }
 
-.hb_single_room .hb_room_gallery .camera_thumbs .camera_thumbs_cont ul li img {
+.single-hb_room .hb_room_gallery .camera_thumbs .camera_thumbs_cont ul li img {
     margin: 0;
     width: 100%;
     border: 0;
 }
 
-.hb_single_room .hb_room_gallery .camera_thumbs .camera_thumbs_cont ul li.cameracurrent:before {
+.single-hb_room .hb_room_gallery .camera_thumbs .camera_thumbs_cont ul li.cameracurrent:before {
     border-color: var(--hb-primary, #ffb606);
     z-index: 2;
 }
 /* end old camera gallery */
 
-.hb_single_room .hb-share {
+.single-hb_room .hb-share {
     clear: both;
     float: right;
     margin-bottom: -50px;
 }
 
-.hb_single_room .hb-share ul {
+.single-hb_room .hb-share ul {
     list-style: none;
 }
 
-.hb_single_room .hb-share ul li {
+.single-hb_room .hb-share ul li {
     display: inline-block;
     padding-left: 19px;
 }
 
-.hb_single_room .hb-share ul li:first-child {
+.single-hb_room .hb-share ul li:first-child {
     padding-left: 0;
 }
 
-.hb_single_room .hb-share ul li a {
+.single-hb_room .hb-share ul li a {
     font-size: 16px;
 }
 
-.hb_single_room .hb-share ul li a.facebook {
+.single-hb_room .hb-share ul li a.facebook {
     color: #4c67a2;
 }
 
-.hb_single_room .hb-share ul li a.twitter {
+.single-hb_room .hb-share ul li a.twitter {
     color: #00acee;
 }
 
-.hb_single_room .hb-share ul li a.googleplus {
+.single-hb_room .hb-share ul li a.googleplus {
     color: #da7c74;
 }
 
-.hb_single_room .hb-share ul li a.pinterest {
+.single-hb_room .hb-share ul li a.pinterest {
     color: #d43b17;
 }
 
-.hb_single_room .hb_single_room_details {
+.single-hb_room .hb_single_room_details {
     clear: both;
 }
 
-.hb_single_room .hb_single_room_tabs {
+.single-hb_room .hb_single_room_tabs {
     clear: both;
     margin: 0;
     padding: 0;
@@ -729,26 +734,24 @@
     border-bottom: 1px solid #ddd;
 }
 
-.hb_single_room .hb_single_room_tabs > li {
+.single-hb_room .hb_single_room_tabs > li {
     display: inline-block;
     margin: 0;
     padding-right: 40px;
     border: 0;
-    line-height: 30px;
 }
 
-.hb_single_room .hb_single_room_tabs > li a {
+.single-hb_room .hb_single_room_tabs > li a {
     position: relative;
     display: block;
     font-size: var(--hb-font-size-base, 16px);
     font-weight: 500;
     color: #5d5d5d;
-    text-decoration: none;
-    line-height: 30px;
+    text-decoration: none !important;
     padding-bottom: 4px;
 }
 
-.hb_single_room .hb_single_room_tabs > li a:after {
+.single-hb_room .hb_single_room_tabs > li a:after {
     content: '';
     bottom: -1px;
     height: 2px;
@@ -759,43 +762,43 @@
     position: absolute;
 }
 
-.hb_single_room .hb_single_room_tabs > li a.active {
+.single-hb_room .hb_single_room_tabs > li a.active {
     color: var(--hb-primary, #111);
 }
 
-.hb_single_room .hb_single_room_tabs > li a.active:after {
+.single-hb_room .hb_single_room_tabs > li a.active:after {
     background: var(--hb-primary, #ffb606);
 }
 
-.hb_single_room .hb_single_room_tabs_content {
+.single-hb_room .hb_single_room_tabs_content {
     padding: 30px 0;
 }
 
-.hb_single_room #reviews {
+.single-hb_room #reviews {
     clear: both;
 }
 
-.hb_single_room #reviews #review_form_wrapper {
+.single-hb_room #reviews #review_form_wrapper {
     margin-top: 30px;
 }
 
-.hb_single_room #reviews #review_form_wrapper form input {
+.single-hb_room #reviews #review_form_wrapper form input {
     min-height: 40px;
     border: 1px solid #ddd;
     text-shadow: none;
     box-shadow: none;
 }
 
-.hb_single_room #reviews #review_form_wrapper form p {
+.single-hb_room #reviews #review_form_wrapper form p {
     margin-bottom: 20px;
 }
 
-.hb_single_room #reviews #review_form_wrapper form p label {
+.single-hb_room #reviews #review_form_wrapper form p label {
     margin-bottom: 10px;
     display: block;
 }
 
-.hb_single_room #reviews #review_form_wrapper form p textarea {
+.single-hb_room #reviews #review_form_wrapper form p textarea {
     height: 100px;
     padding: 10px;
     overflow-y: auto;
@@ -803,7 +806,7 @@
     border: 1px solid #ddd;
 }
 
-.hb_single_room #reviews #review_form_wrapper form .form-submit input[type="submit"] {
+.single-hb_room #reviews #review_form_wrapper form .form-submit input[type="submit"] {
     padding: 10px 25px;
     line-height: 20px;
     border: 0;
@@ -812,23 +815,23 @@
     color: var(--hb-heading, #111);
 }
 
-.hb_single_room #reviews #review_form_wrapper form .form-submit input[type="submit"]:hover {
+.single-hb_room #reviews #review_form_wrapper form .form-submit input[type="submit"]:hover {
     background: var(--hb-heading, #111);
     color: #fff;
 }
 
-.hb_single_room #reviews #review_form_wrapper form .form-submit input[type="submit"]:focus {
+.single-hb_room #reviews #review_form_wrapper form .form-submit input[type="submit"]:focus {
     outline: none;
 }
 
-.hb_single_room table.hb_room_pricing_plans tr th {
+.single-hb_room table.hb_room_pricing_plans tr th {
     font-weight: 700;
     color: var(--hb-heading, #111);
     padding: 12px;
     text-align: center;
 }
 
-.hb_single_room table.hb_room_pricing_plans tr td {
+.single-hb_room table.hb_room_pricing_plans tr td {
     text-align: center;
     padding: 12px;
 }
@@ -842,31 +845,31 @@
 }
 
 @media (max-width: 1024px) {
-    .hb_single_room .hb_room_gallery .camera_thumbs .camera_thumbs_cont ul {
+    .single-hb_room .hb_room_gallery .camera_thumbs .camera_thumbs_cont ul {
         max-height: 106px;
     }
 
-    .hb_single_room .hb_room_gallery .camera_thumbs .camera_thumbs_cont ul li {
+    .single-hb_room .hb_room_gallery .camera_thumbs .camera_thumbs_cont ul li {
         max-width: 142px;
     }
 }
 
 @media (max-width: 960px) {
-    .hb_single_room .hb_room_gallery .camera_thumbs .camera_thumbs_cont ul {
+    .single-hb_room .hb_room_gallery .camera_thumbs .camera_thumbs_cont ul {
         max-height: 130px;
     }
 
-    .hb_single_room .hb_room_gallery .camera_thumbs .camera_thumbs_cont ul li {
+    .single-hb_room .hb_room_gallery .camera_thumbs .camera_thumbs_cont ul li {
         max-width: 150px;
     }
 }
 
 @media (max-width: 768px) {
-    .hb_single_room .hb_room_gallery .camera_thumbs .camera_thumbs_cont ul {
+    .single-hb_room .hb_room_gallery .camera_thumbs .camera_thumbs_cont ul {
         max-height: 106px;
     }
 
-    .hb_single_room .hb_room_gallery .camera_thumbs .camera_thumbs_cont ul li {
+    .single-hb_room .hb_room_gallery .camera_thumbs .camera_thumbs_cont ul li {
         max-width: 142px;
     }
 
@@ -876,41 +879,41 @@
 }
 
 @media (max-width: 667px) {
-    .hb_single_room .hb_room_gallery .camera_thumbs .camera_thumbs_cont ul {
+    .single-hb_room .hb_room_gallery .camera_thumbs .camera_thumbs_cont ul {
         max-height: 106px;
     }
 
-    .hb_single_room .hb_room_gallery .camera_thumbs .camera_thumbs_cont ul li {
+    .single-hb_room .hb_room_gallery .camera_thumbs .camera_thumbs_cont ul li {
         max-width: 142px;
     }
 }
 
 @media (max-width: 480px) {
-    .hb_single_room .hb_room_gallery .camera_thumbs .camera_thumbs_cont ul {
+    .single-hb_room .hb_room_gallery .camera_thumbs .camera_thumbs_cont ul {
         max-height: 95px;
     }
 
-    .hb_single_room .hb_room_gallery .camera_thumbs .camera_thumbs_cont ul li {
+    .single-hb_room .hb_room_gallery .camera_thumbs .camera_thumbs_cont ul li {
         max-width: 132px;
     }
 }
 
 @media (max-width: 360px) {
-    .hb_single_room .hb_room_gallery .camera_thumbs .camera_thumbs_cont ul {
+    .single-hb_room .hb_room_gallery .camera_thumbs .camera_thumbs_cont ul {
         max-height: 106px;
     }
 
-    .hb_single_room .hb_room_gallery .camera_thumbs .camera_thumbs_cont ul li {
+    .single-hb_room .hb_room_gallery .camera_thumbs .camera_thumbs_cont ul li {
         max-width: 142px;
     }
 }
 
 @media (max-width: 320px) {
-    .hb_single_room .hb_room_gallery .camera_thumbs .camera_thumbs_cont ul {
+    .single-hb_room .hb_room_gallery .camera_thumbs .camera_thumbs_cont ul {
         max-height: 106px;
     }
 
-    .hb_single_room .hb_room_gallery .camera_thumbs .camera_thumbs_cont ul li {
+    .single-hb_room .hb_room_gallery .camera_thumbs .camera_thumbs_cont ul li {
         max-width: 142px;
     }
 }
@@ -1098,6 +1101,10 @@
     color: var(--hb-heading, #111);
 }
 
+#hotel-booking-payment p {
+    margin-bottom: 1em;
+}
+
 #hotel-booking-cart input[type="number"],
 #hotel-booking-payment input[type="number"],
 #hotel-booking-cart input[type="text"],
@@ -1108,6 +1115,7 @@
     border: 1px solid #ddd;
     box-shadow: none;
     text-shadow: none;
+    line-height: 1.3;
 }
 
 #hotel-booking-cart input[name="hb-coupon-code"],
@@ -1118,6 +1126,13 @@
 #hotel-booking-cart button#hb-apply-coupon,
 #hotel-booking-payment button#hb-apply-coupon {
     margin: 10px 0 10px 5px;
+    color: #fff;
+}
+
+#hotel-booking-payment input[type="checkbox"], #hotel-booking-payment input[type="radio"] {
+    width: 20px;
+    height: 20px;
+    border-width: 1px;
 }
 
 #hotel-booking-cart input[type="number"],
@@ -1295,8 +1310,6 @@
     width: 20px;
     height: 30px;
     opacity: 0.5;
-    -ms-filter: progid:DXImageTransform.Microsoft.Alpha(opacity=50);
-    filter: alpha(opacity=50);
     -ms-transition: all 0.3s;
     transition: all 0.3s;
 }
@@ -1309,8 +1322,6 @@
 .ui-datepicker.ui-widget .ui-datepicker-header .ui-datepicker-prev:hover,
 .ui-datepicker.ui-widget .ui-datepicker-header .ui-datepicker-next:hover {
     opacity: 1;
-    -ms-filter: progid:DXImageTransform.Microsoft.Alpha(opacity=100);
-    filter: alpha(opacity=100);
 }
 
 .ui-datepicker.ui-widget .ui-datepicker-header .ui-datepicker-prev {
@@ -1399,28 +1410,28 @@
     margin-top: 10px;
     visibility: hidden;
     opacity: 0;
-   
-    min-width: 430px;
+    width: 100%;
+    min-width: 300px;
     padding: 20px;
     background: #fff;
     box-shadow: 0px 4px 15px 0px #E6DEDE;
     z-index: 0;
-    -ms-filter: progid:DXImageTransform.Microsoft.Alpha(opacity=0);
-    filter: alpha(opacity=0);
     -webkit-transition: all 0.3s;
     transition: all 0.3s;
 }
 
 .hb-booking-room-details.active {
     opacity: 1;
-    -ms-filter: progid:DXImageTransform.Microsoft.Alpha(opacity=100);
-    filter: alpha(opacity=100);
     visibility: visible;
     z-index: 999;
 }
 
 .hb-booking-room-details .hb_search_room_pricing_price {
     margin: 0;
+}
+
+.hb-booking-room-details .hb_search_room_pricing_price tfoot {
+    text-align: initial;
 }
 
 .hb-booking-room-details .hb_search_room_item_detail_price_close {
@@ -1462,6 +1473,7 @@
 .hb-booking-room-details table tr td.hb_search_item_price {
     color: var(--hb-primary, #ffb606);
     font-weight: 700;
+    text-align: right;
 }
 
 .hb-booking-room-details table tbody tr td {
@@ -2264,24 +2276,24 @@ input[type="submit"],
         margin-left: 0;
     }
 
-    .hb_single_room .price {
+    .single-hb_room .price {
         margin: 10px 0 20px;
         float: none;
         clear: both;
     }
 
-    .hb_single_room table.hb_room_pricing_plans {
+    .single-hb_room table.hb_room_pricing_plans {
         max-width: 99vw;
         overflow: hidden;
         margin-top: 10px;
     }
 
-    .hb_single_room table.hb_room_pricing_plans tr td {
+    .single-hb_room table.hb_room_pricing_plans tr td {
         padding: 5px 0;
         font-size: 13px;
     }
 
-    .hb_single_room table.hb_room_pricing_plans tr th {
+    .single-hb_room table.hb_room_pricing_plans tr th {
         padding: 5px 0;
         font-size: 13px;
     }
@@ -2672,7 +2684,7 @@ button.wphb_loading::before {
         width: 100%;
     }
 
-    .hb_single_room .title h1 {
+    .single-hb_room .title h1 {
         font-size: 27px;
     }
 
@@ -2763,6 +2775,7 @@ div.sort-by-wrapper, .sort-by-wrapper .sort-by {
     flex-wrap: wrap;
     justify-content: space-between;
     align-items: center;
+    border: none;
 }
 
 .sort-by-wrapper {
@@ -2797,10 +2810,10 @@ div.sort-by-wrapper, .sort-by-wrapper .sort-by {
 .sort-by-wrapper .toggle:after {
     position: absolute;
     content: " ";
-    width: 100%;
-    height: 100%;
+    width: 16px;
+    height: 16px;
     top: 16px;
-    right: -93%;
+    right: 6px;
     background: url(data:image/svg+xml;base64,PHN2ZyBjbGFzcz0iYmkgYmktY2hldnJvbi1kb3duIGN1cnNvci1wb2ludGVyIiBmaWxsPSIjMDAwIiBoZWlnaHQ9IjEwIiB2aWV3Qm94PSIwIDAgMTYgMTYiIHdpZHRoPSIxMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICAgICAgPHBhdGggZD0iTTEuNjQ2IDQuNjQ2YS41LjUgMCAwIDEgLjcwOCAwTDggMTAuMjkzbDUuNjQ2LTUuNjQ3YS41LjUgMCAwIDEgLjcwOC43MDhsLTYgNmEuNS41IDAgMCAxLS43MDggMGwtNi02YS41LjUgMCAwIDEgMC0uNzA4eiIgZmlsbC1ydWxlPSJldmVub2RkIj48L3BhdGg+CiAgICA8L3N2Zz4=) no-repeat;
 }
 
@@ -3273,8 +3286,8 @@ ul.hb-room-review-images img {
 }
 
 .hb-room-commentlist-sort-filter .gallery-filter a.active {
-    color: white;
-    background: #01AA90;
+    color: #fff;
+    background: var(--hb-primary, #ffb606);
 }
 
 .sort-by {

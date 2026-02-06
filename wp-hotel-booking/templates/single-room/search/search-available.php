@@ -28,18 +28,18 @@ if ( ! $post || ! is_single( $post->ID ) || get_post_type( $post->ID ) !== 'hb_r
 
         <div class="hb-booking-room-form-head">
             <h2><?php printf( '%s', $post->post_title ); ?></h2>
-            <p class="description"><?php _e( 'Please set arrival date and departure date before check available.', 'wp-hotel-booking' ); ?></p>
+            <p class="description"><?php _e( 'Please set check-in date and check-out date before check available.', 'wp-hotel-booking' ); ?></p>
         </div>
 
         <div class="hb-search-results-form-container">
             <div class="hb-booking-room-form-group">
                 <div class="hb-booking-room-form-field hb-form-field-input">
-                    <input type="text" name="check_in_date" value="{{ data.check_in_date }}" placeholder="<?php _e( 'Arrival Date', 'wp-hotel-booking' ); ?>" autocomplete="off"/>
+                    <input type="text" name="check_in_date" value="{{ data.check_in_date }}" placeholder="<?php _e( 'Check-in Date', 'wp-hotel-booking' ); ?>" autocomplete="off"/>
                 </div>
             </div>
             <div class="hb-booking-room-form-group">
                 <div class="hb-booking-room-form-field hb-form-field-input">
-                    <input type="text" name="check_out_date" value="{{ data.check_out_date }}" placeholder="<?php _e( 'Departure Date', 'wp-hotel-booking' ); ?>" autocomplete="off"/>
+                    <input type="text" name="check_out_date" value="{{ data.check_out_date }}" placeholder="<?php _e( 'Check-out Date', 'wp-hotel-booking' ); ?>" autocomplete="off"/>
                 </div>
             </div>
             <div class="hb-booking-room-form-group">

@@ -49,7 +49,7 @@ import flatpickr from 'flatpickr';
 		return data;
 	}
 
-	function fetchCustomerInfo() {
+	/*function fetchCustomerInfo() {
 		const $button = $( this ),
 			$email = $( 'input[name="existing-customer-email"]' );
 		if ( ! isEmail( $email.val() ) ) {
@@ -60,7 +60,9 @@ import flatpickr from 'flatpickr';
 		}
 		$button.attr( 'disabled', true );
 		$email.attr( 'disabled', true );
-		const customer_table = $( '.hb-col-padding.hb-col-border' );
+		const customer_table = $( '.hb-col-padding.hb-col-border' ),
+		nonceField = $email.closest( '.hb-form-field-input' ).find( '[name="existing-customer-nonce"]' );
+
 		$.ajax( {
 			url: hotel_settings.ajax,
 			dataType: 'html',
@@ -68,7 +70,8 @@ import flatpickr from 'flatpickr';
 			data: {
 				action: 'hotel_booking_fetch_customer_info',
 				email: $email.val(),
-				nonce: hotel_settings.nonce,
+				_ajax_nonce: nonceField?.val() ?? '',
+				_wp_http_referer: window.location.pathname
 			},
 			beforeSend() {
 				customer_table.hb_overlay_ajax_start();
@@ -100,7 +103,7 @@ import flatpickr from 'flatpickr';
 				$email.removeAttr( 'disabled' );
 			},
 		} );
-	}
+	}*/
 
 	function hotel_checkout_fetch_error( msgs ) {
 		if ( msgs.length === 0 ) {
@@ -824,7 +827,7 @@ import flatpickr from 'flatpickr';
 			}
 		} );
 
-		$( '#fetch-customer-info' ).click( fetchCustomerInfo );
+		// $( '#fetch-customer-info' ).click( fetchCustomerInfo );
 
 		$doc.on( 'click', '.hb-view-booking-room-details, .hb_search_room_item_detail_price_close', function( e ) {
 			e.preventDefault();
@@ -850,6 +853,7 @@ import flatpickr from 'flatpickr';
 				dataType: 'html',
 				data: {
 					action: 'hotel_booking_remove_coupon',
+                    nonce: hotel_settings.nonce,
 				},
 				beforeSend() {
 					table.hb_overlay_ajax_start();
@@ -912,7 +916,7 @@ import flatpickr from 'flatpickr';
 			const tab_id = $( this ).attr( 'href' );
 			hb_single_tab_details.hide();
 			hb_single_details_content.find( tab_id ).fadeIn();
-			return false;
+			// return false;
 		} );
 
 		$( '.hb-rating-input' ).rating();
@@ -1048,7 +1052,7 @@ import flatpickr from 'flatpickr';
 
 'use strict';
 
-let datePickerCheckIn, datePickerCheckOut, datePickerRange;
+// let datePickerCheckIn, datePickerCheckOut, datePickerRange;
 const wphbDatePicker = () => {
 	const elFormTables = document.querySelectorAll( '.hb-form-table' );
 	if ( ! elFormTables.length ) {
@@ -1063,7 +1067,7 @@ const wphbDatePicker = () => {
 		const dateTomorrow = new Date( dateNow.setDate( dateNow.getDate() + 1 ) );
 		const minBookingDateNumber = hotel_settings.min_booking_date > 0 ? parseInt( hotel_settings.min_booking_date ) : 1;
 
-		if ( elDateCheckIn && ! elDateCheckIn.closest( '.hb-form-check-in-check-out' ) ) {
+		if ( elDateCheckIn && elDateCheckOut && ! elDateCheckIn.closest( '.hb-form-check-in-check-out' ) ) {
 			// Check in date
 			const optionCheckIn = {
 				dateFormat: 'Y/m/d',
@@ -1079,18 +1083,15 @@ const wphbDatePicker = () => {
 						const dateSelected = selectedDates[ 0 ];
 						datePickerCheckOut.clear();
 						const dateNext = new Date( dateSelected.setDate( dateSelected.getDate() + minBookingDateNumber ) );
-						console.log( dateNext );
+						elDateCheckOut.focus();
 						datePickerCheckOut.set( 'minDate', dateNext );
-						//datePickerCheckOut.set( 'date', dateNext );
 						datePickerCheckOut.open();
 					}
 				},
 			};
 
-			datePickerCheckIn = flatpickr( elDateCheckIn, optionCheckIn );
-		}
+			const datePickerCheckIn = flatpickr( elDateCheckIn, optionCheckIn );
 
-		if ( elDateCheckOut && ! elDateCheckOut.closest( '.hb-form-check-in-check-out' ) ) {
 			// Check out date
 			const optionCheckout = {
 				dateFormat: 'Y/m/d',
@@ -1104,7 +1105,7 @@ const wphbDatePicker = () => {
 				},
 			};
 
-			datePickerCheckOut = flatpickr( elDateCheckOut, optionCheckout );
+			const datePickerCheckOut = flatpickr( elDateCheckOut, optionCheckout );
 		}
 
 		if ( elDateRange && elDateRange.closest( '.hb-form-check-in-check-out' ) ) {
@@ -1135,7 +1136,7 @@ const wphbDatePicker = () => {
 
 				},
 			};
-			datePickerRange = flatpickr( elDateRange, optionRange );
+			const datePickerRange = flatpickr( elDateRange, optionRange );
 
 			if ( elDateCheckInOut ) {
 				elDateCheckInOut.addEventListener( 'click', ( e ) => {

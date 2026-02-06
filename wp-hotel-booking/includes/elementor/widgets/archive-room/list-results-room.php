@@ -141,21 +141,18 @@ class Thim_Ekit_Widget_List_Results_Room extends Widget_Base {
 	protected function render()
     {
 		$settings        = $this->get_settings_for_display();
-		$params = $_GET;
+		// $params = $_GET;
 		$response         = new \WPHB_REST_RESPONSE();
 		$response->status = 'success';
 
 		$datetime 		 = new \DateTime('NOW');
 		$tomorrow 		 = new \DateTime('tomorrow');
 		$format 		 = get_option('date_format');
-
-		$check_in_date   = isset($params['check_in_date']) ? $params['check_in_date'] : $datetime->format($format);
-		$check_out_date  = isset($params['check_out_date']) ? $params['check_out_date'] : $tomorrow->format($format);
-		$adults_capacity = isset($params['adults']) ? $params['adults'] : hb_get_request( 'adults', 1 );
-		$max_child       = isset($params['max_child']) ? $params['max_child'] : hb_get_request( 'max_child', 0 );
-
-
-		$paged           = isset( $params['paged'] ) ?? 1;
+		$check_in_date   = hb_get_request( 'check_in_date', $datetime->format($format) );
+		$check_out_date  = hb_get_request( 'check_out_date', $tomorrow->format($format) );
+		$adults_capacity = hb_get_request( 'adults_capacity', hb_get_request( 'adults', 1 ) );
+		$max_child       = hb_get_request( 'max_child', 0 );
+		$paged           = hb_get_request( 'paged', 1 );
 
 		if ( hb_get_request( 'is_page_room_extra' ) == 'select-room-extra' ) {
 
@@ -181,11 +178,11 @@ class Thim_Ekit_Widget_List_Results_Room extends Widget_Base {
 			'search_page'    => null,
 			'widget_search'  => false,
 			'hb_page'        => $paged,
-			'min_price'      => $params['min_price'] ?? '',
-			'max_price'      => $params['max_price'] ?? '',
-			'rating'         => $params['rating'] ?? '',
-			'room_type'      => $params['room_type'] ?? '',
-			'sort_by'        => $params['sort_by'] ?? '',
+			'min_price'      => hb_get_request( 'min_price', '' ),
+			'max_price'      => hb_get_request( 'max_price', '' ),
+			'rating'         => hb_get_request( 'rating', '' ),
+			'room_type'      => hb_get_request( 'room_type', '' ),
+			'sort_by'        => hb_get_request( 'sort_by', '' ),
 		);
 
 		$results = hb_search_rooms( $atts );
@@ -194,7 +191,7 @@ class Thim_Ekit_Widget_List_Results_Room extends Widget_Base {
 			echo '<p class="message message-error">' . esc_html__( 'Error: No rooms available!.', 'wp-hotel-booking' ) . '</p>';
 			return;
 		}
-		$custom_process = get_option( 'tp_hotel_booking_custom_process' );
+		// $custom_process = get_option( 'tp_hotel_booking_custom_process' );
 		$rooms = $results['data'];
 		$class_item  = 'hb-room-archive__article'; ?>
 
@@ -207,7 +204,7 @@ class Thim_Ekit_Widget_List_Results_Room extends Widget_Base {
 
 					$this->current_permalink = get_permalink(); ?>
 					<div class="hb-room clearfix">
-						<form name="hb-page-search-results" class="hb-page-search-room-results <?php echo $class_item ?> <?php echo ! empty( $custom_process ) ? ' custom-process' : ' extra-option-loop'; ?>" >
+						<form name="hb-page-search-results" class="hb-page-search-room-results <?php echo $class_item ?> extra-option-loop" >
 						<?php do_action( 'hotel_booking_loop_before_item', $room->ID ); ?>
 							<?php
 								\Thim_EL_Kit\Utilities\Elementor::instance()->render_loop_item_content( $settings['template_id'] );

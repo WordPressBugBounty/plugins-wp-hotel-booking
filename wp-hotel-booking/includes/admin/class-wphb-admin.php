@@ -61,6 +61,7 @@ if ( ! class_exists( 'WPHB_Admin' ) ) {
 			WP_Hotel_Booking::instance()->_include( 'includes/admin/metaboxes/rooms/tabs/class-wphb-admin-metabox-room-price.php' );
 			WP_Hotel_Booking::instance()->_include( 'includes/admin/metaboxes/rooms/tabs/class-wphb-admin-metabox-room-block-date.php' );
 			WP_Hotel_Booking::instance()->_include( 'includes/admin/metaboxes/rooms/tabs/class-wphb-admin-metabox-room-facilities.php' );
+			WP_Hotel_Booking::instance()->_include( 'includes/admin/metaboxes/rooms/tabs/class-wphb-admin-metabox-room-external-link.php' );
 
 			// setup wizard
 			WP_Hotel_Booking::instance()->_include( 'includes/admin/setup/class-wphb-setup-wizard.php' );
@@ -136,7 +137,7 @@ if ( ! class_exists( 'WPHB_Admin' ) ) {
 				$agrs_meta = array(
 					'room_capacity_adult' => array(
 						'name'  => 'room_capacity_adult',
-						'label' => __( 'Room Capacities', 'wp-hotel-booking' ),
+						'label' => __( 'Max adults per room', 'wp-hotel-booking' ),
 						'type'  => 'number',
 						'std'   => ! empty( $max_adult ) ?: 1,
 						'min'   => 1,
