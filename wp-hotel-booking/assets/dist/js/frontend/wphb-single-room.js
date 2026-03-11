@@ -3062,18 +3062,18 @@ const wphbRoomInitDatePicker = () => {
 
     // Get date min check in can book
     /*let dateMinCheckInCanBook;
-    	const getDateMinCheckInCanBook = ( dateCompare, datesBlock ) => {
+    		const getDateMinCheckInCanBook = ( dateCompare, datesBlock ) => {
     	datesBlock.some( ( date ) => {
     		console.log()
     		if ( date.getTime() > dateCompare.getTime() ) {
     			dateMinCheckInCanBook = dateCompare;
     			return true;
     		}
-    			dateCompare = new Date( dateCompare.setDate( dateCompare.getDate() + 1 ) );
+    				dateCompare = new Date( dateCompare.setDate( dateCompare.getDate() + 1 ) );
     		//dateDisableNear = getDateMinCheckInCanBook( dateCompare, datesBlock );
     	} );
     };
-    	getDateMinCheckInCanBook( dateNow, datesBlock );*/
+    		getDateMinCheckInCanBook( dateNow, datesBlock );*/
   } else {
     dateMinCheckInCanBook = dateNow;
     dateMinCheckOutCanBook = dateTomorrow;
