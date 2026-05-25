@@ -1,7 +1,22 @@
 import flatpickr from 'flatpickr';
+import flatpickrLocales from 'flatpickr/dist/l10n/index.js';
 import tingle from 'tingle.js';
-// import 'flatpickr/dist/flatpickr.min.css';
+
 import * as utils from '../utils.js';
+import {
+	FLATPICKR_RANGE_SEPARATOR,
+	applyFlatpickrLocaleConfig,
+	createBookingDateHelpers,
+	createFlatpickrConfig,
+	createFlatpickrLocaleConfig,
+	createMinEndDateDayCreateHandler,
+	formatDateRangeValue,
+	getMinBookingDays,
+	getMinEndDateFromStartDate,
+	mapBookingTimestampsToDates,
+	syncBookingDateFieldsForUi,
+	validateBookingDateRange,
+} from './flatpickr-locale-utils.js';
 
 let modalCheckDates;
 const className = {
@@ -16,15 +31,41 @@ let elHotelBookingRoom,
 	elBtnsCalendarPricing,
 	roomDateRangeSelector,
 	minEndDatePlan;
-const toYmdLocal = ( date ) => {
-	const z = ( n ) => ( '0' + n ).slice( -2 );
-	return (
-		date.getFullYear() +
-		'/' +
-		z( date.getMonth() + 1 ) +
-		'/' +
-		z( date.getDate() )
-	);
+const INTERNAL_DATE_FORMAT = hotel_settings.internal_date_format || 'Y/m/d';
+const FRONTEND_DATE_FORMAT =
+	hotel_settings.flatpickr_date_format || INTERNAL_DATE_FORMAT;
+// Build one locale config for all pickers: browser locale + admin first day of week.
+const FLATPICKR_LOCALE = createFlatpickrLocaleConfig(
+	flatpickrLocales,
+	hotel_settings.first_day_of_week
+);
+applyFlatpickrLocaleConfig( flatpickr, FLATPICKR_LOCALE );
+const {
+	parseBookingDateValue,
+	parseFlatpickrDate,
+	formatBookingDateForUi,
+	formatBookingDateForSubmit,
+} = createBookingDateHelpers(
+	flatpickr,
+	FRONTEND_DATE_FORMAT,
+	INTERNAL_DATE_FORMAT
+);
+
+// Validate and normalize before submit to avoid ambiguous string date parsing.
+const validateAndNormalizeBookingDateRange = ( form ) => {
+	return validateBookingDateRange( form, {
+		parseBookingDateValue,
+		formatBookingDateForSubmit,
+		emptyCheckInMessage:
+			window?.hotel_booking_i18n?.empty_check_in_date ||
+			'Please select check in date.',
+		emptyCheckOutMessage:
+			window?.hotel_booking_i18n?.empty_check_out_date ||
+			'Please select check out date.',
+		invalidRangeMessage:
+			window?.hotel_booking_i18n?.check_out_date_must_be_greater ||
+			'Check out date must be greater than the check in.',
+	} );
 };
 const wphbRoomInitDatePicker = () => {
 	elHotelBookingRoom = document.querySelector( '#hotel_booking_room_hidden' );
@@ -44,51 +85,28 @@ const wphbRoomInitDatePicker = () => {
 	const elDateCheckIn = elForm.querySelector( 'input[name="check_in_date"]' );
 	const elDateCheckOut = elForm.querySelector( 'input[name="check_out_date"]' );
 	const elDateRange = elForm.querySelector( 'input[name="select-date-range"]' );
+	syncBookingDateFieldsForUi(
+		{
+			checkInField: elDateCheckIn,
+			checkOutField: elDateCheckOut,
+			rangeField: elDateRange,
+			rangeSeparator: FLATPICKR_RANGE_SEPARATOR,
+		},
+		{
+			parseBookingDateValue,
+			formatBookingDateForUi,
+		}
+	);
 	let datePickerCheckIn;
 	let datePickerCheckOut;
 	let dateMinCheckInCanBook;
 	let dateMinCheckOutCanBook;
-	const datesBlock = [];
+	const datesBlock = mapBookingTimestampsToDates( hotel_settings.block_dates );
 	const dateNow = new Date();
 	const dateTomorrow = new Date( dateNow.setDate( dateNow.getDate() + 1 + hotel_settings.min_booking_date ) );
-	const minBookingDateNumber =
-		hotel_settings.min_booking_date > 0
-			? parseInt( hotel_settings.min_booking_date )
-			: 1;
+	const minBookingDateNumber = getMinBookingDays( hotel_settings.min_booking_date );
 
-	if ( hotel_settings.block_dates ) {
-		const dateTimeStampsBlock = hotel_settings.block_dates;
-
-		if ( dateTimeStampsBlock ) {
-			dateTimeStampsBlock.forEach( ( timeStamp ) => {
-				const date = new Date( timeStamp * 1000 );
-				const dateBlock = new Date(
-					date.getFullYear(),
-					date.getMonth(),
-					date.getDate()
-				);
-				datesBlock.push( dateBlock );
-			} );
-		}
-
-		// Get date min check in can book
-		/*let dateMinCheckInCanBook;
-
-		const getDateMinCheckInCanBook = ( dateCompare, datesBlock ) => {
-			datesBlock.some( ( date ) => {
-				console.log()
-				if ( date.getTime() > dateCompare.getTime() ) {
-					dateMinCheckInCanBook = dateCompare;
-					return true;
-				}
-
-				dateCompare = new Date( dateCompare.setDate( dateCompare.getDate() + 1 ) );
-				//dateDisableNear = getDateMinCheckInCanBook( dateCompare, datesBlock );
-			} );
-		};
-
-		getDateMinCheckInCanBook( dateNow, datesBlock );*/
-	} else {
+	if ( datesBlock.length === 0 ) {
 		dateMinCheckInCanBook = dateNow;
 		dateMinCheckOutCanBook = dateTomorrow;
 	}
@@ -115,65 +133,67 @@ const wphbRoomInitDatePicker = () => {
 		return dateCalendar <= dateSelected;
 	};
 	if ( elDateRange ) {
-		let positionEle = parseInt( elDateRange.getAttribute( 'data-hidden' ) ) === 1 ? elDateCheckIn : null,
-			roomId = elForm.querySelector('input[name="room-id"]').value;
-			let minEndDate;
-		roomDateRangeSelector = flatpickr( elDateRange, {
-		    mode: "range",
-		    dateFormat: 'Y/m/d',
-		    minDate: 'today',
-		    disable: datesBlock,
-		    showMonths: 2,
-		    positionElement: positionEle,
-		    locale: {
-		    	firstDayOfWeek: 1,
-		    },
-		    defaultDate: [elDateCheckIn.value, elDateCheckOut.value],
-		    onDayCreate: function(dObj, dStr, fpInstance, dayElem) {
-		        if (!minEndDate) return;
-		        const date = dayElem.dateObj;
-		        // disable dates which smaller than minEndDate
-		        if (date < minEndDate) {
-		        	dayElem.classList.add('flatpickr-disabled');
-		        	dayElem.setAttribute('aria-disabled', 'true');
-		        }
-		    },
-		    onChange: function(selectedDates, dateStr, instance) {
-		        if (selectedDates.length === 2) {
-		        	elDateCheckIn.value = toYmdLocal( selectedDates[0] );
-		        	elDateCheckOut.value = toYmdLocal(selectedDates[1]);
-		        	instance._input.value = toYmdLocal( selectedDates[0] ) + ' - ' + toYmdLocal(selectedDates[1]);
-		        	// reset minEndDate
-		        	minEndDate = new Date();
-		        	instance.redraw();
-		        	// Calculate booking price after selecting dates
-		        	calculateBookingPrice( elForm );
-		        } else if (selectedDates.length === 1) {
-	                const start = selectedDates[0];
-	                minEndDate = new Date(start);
-	                minEndDate.setDate(minEndDate.getDate() + hotel_settings.min_booking_date);
-	                // redraw to trigger onDayCreate
-	                instance.redraw();
-		        } else if ( selectedDates.length === 0 ) {
-		        	// reset minEndDate
-		        	minEndDate = new Date();
-		        	instance.redraw();
-		        }
-		    },
-		    onMonthChange: function ( selectedDates, dateStr, instance ) {
-		    	let month = instance.currentMonth + 1,
-		    		year = instance.currentYear;
-		    	if ( undefined!==roomCalendarPricing ) {
-		    		roomCalendarPricing.jumpToDate(year + "/" + month + "/01");
-		    		roomCalendarPricing.config.onMonthChange.forEach(fn => fn(
-			    			roomCalendarPricing.selectedDates,
-			    			roomCalendarPricing.input.value,
-			    			roomCalendarPricing
-		    			)
-		    		);
-		    	}
-		    }
-		});
+			// Single range picker mode: one input controls both check-in and check-out.
+			let positionEle = parseInt( elDateRange.getAttribute( 'data-hidden' ) ) === 1 ? elDateCheckIn : null;
+			let minEndDate = null;
+			roomDateRangeSelector = flatpickr( elDateRange, createFlatpickrConfig(
+				{
+					dateFormat: FRONTEND_DATE_FORMAT,
+					parseDate: parseFlatpickrDate,
+					locale: FLATPICKR_LOCALE,
+				},
+				{
+					mode: 'range',
+					minDate: 'today',
+					disable: datesBlock,
+					showMonths: 2,
+					positionElement: positionEle,
+					defaultDate: [ elDateCheckIn.value, elDateCheckOut.value ],
+					onDayCreate: createMinEndDateDayCreateHandler(
+						() => minEndDate
+					),
+					onChange: function( selectedDates, dateStr, instance ) {
+						if ( selectedDates.length === 2 ) {
+							elDateCheckIn.value = formatBookingDateForUi( selectedDates[ 0 ] );
+							elDateCheckOut.value = formatBookingDateForUi( selectedDates[ 1 ] );
+							instance._input.value = formatDateRangeValue(
+								formatBookingDateForUi( selectedDates[ 0 ] ),
+								formatBookingDateForUi( selectedDates[ 1 ] ),
+								FLATPICKR_RANGE_SEPARATOR
+							);
+							minEndDate = null;
+							instance.redraw();
+							calculateBookingPrice( elForm );
+						} else if ( selectedDates.length === 1 ) {
+							minEndDate = getMinEndDateFromStartDate(
+								selectedDates[ 0 ],
+								minBookingDateNumber
+							);
+							instance.redraw();
+						} else {
+							minEndDate = null;
+							instance.redraw();
+						}
+					},
+					onMonthChange: function( selectedDates, dateStr, instance ) {
+						let month = instance.currentMonth + 1,
+							year = instance.currentYear;
+						if ( undefined !== roomCalendarPricing ) {
+							roomCalendarPricing.jumpToDate(
+								new Date( year, month - 1, 1 )
+							);
+							roomCalendarPricing.config.onMonthChange.forEach(
+								( fn ) =>
+									fn(
+										roomCalendarPricing.selectedDates,
+										roomCalendarPricing.input.value,
+										roomCalendarPricing
+									)
+							);
+						}
+					},
+				}
+			) );
 		elForm.addEventListener( 'click', (e) => {
 			let target = e.target;
 			if ( target === elDateCheckIn || target === elDateCheckOut ) {
@@ -187,7 +207,7 @@ const wphbRoomInitDatePicker = () => {
 					return;
 				}
 				if ( ! elDateCheckIn.value || ! elDateCheckOut.value ) {
-					// elForm.querySelector( '.hb-total-price-value' ).innerHTML = utils.wphbRenderPrice( 0 );
+
 					return;
 				}
 				calculateBookingPrice( elForm );
@@ -195,16 +215,15 @@ const wphbRoomInitDatePicker = () => {
 		} );
 	} else {
 		let defaultCheckInDate = elDateCheckIn.value ? elDateCheckIn.value : dateMinCheckInCanBook;
-		// Check in date
-		const optionCheckIn = {
-			dateFormat: 'Y/m/d',
+		// Two-input mode: check-in picker drives minDate/disabled logic of check-out picker.
+		const optionCheckIn = createFlatpickrConfig( {
+			dateFormat: FRONTEND_DATE_FORMAT,
+			parseDate: parseFlatpickrDate,
+			locale: FLATPICKR_LOCALE,
+		}, {
 			minDate: 'today',
 			disable: datesBlock,
 			defaultDate: defaultCheckInDate,
-			disableMobile: true,
-			locale: {
-				firstDayOfWeek: 1,
-			},
 			onChange( selectedDates, dateStr, instance ) {
 				if ( datePickerCheckOut ) {
 					// calculate next day available
@@ -223,22 +242,19 @@ const wphbRoomInitDatePicker = () => {
 					] );
 				}
 			},
-		};
+		} );
 		datePickerCheckIn = flatpickr( elDateCheckIn, optionCheckIn );
-		// console.log( elDateCheckIn.value );
 		let defaultCheckOutDate = elDateCheckOut.value ? elDateCheckOut.value : dateMinCheckOutCanBook;
-		// Check out date
-		const optionCheckout = {
-			dateFormat: 'Y/m/d',
+		// Check-out picker uses the same strict parser and locale as check-in picker.
+		const optionCheckout = createFlatpickrConfig( {
+			dateFormat: FRONTEND_DATE_FORMAT,
+			parseDate: parseFlatpickrDate,
+			locale: FLATPICKR_LOCALE,
+		}, {
 			minDate: hotel_settings.min_booking_date > 0 ?  new Date().fp_incr( hotel_settings.min_booking_date ) : 'today',
 			disable: datesBlock,
 			defaultDate: defaultCheckOutDate,
-			disableMobile: true,
-			locale: {
-				firstDayOfWeek: 1,
-			},
-			onChange( selectedDates, dateStr, instance ) {},
-		};
+		} );
 		datePickerCheckOut = flatpickr( elDateCheckOut, optionCheckout );
 	}
 };
@@ -254,48 +270,27 @@ const calendarPricing = () => {
 	if ( elRoomCalendarPricing ) {
 		elBtnsCalendarPricing = document.querySelector( className.elBtnsCalendarPricing );
 		const roomId = parseInt( elRoomCalendarPricing.dataset.roomId ) ?? 0;
-		let blockDates = [];
-		if ( hotel_settings.block_dates ) {
-			const dateTimeStampsBlock = hotel_settings.block_dates;
-
-			if ( dateTimeStampsBlock ) {
-				dateTimeStampsBlock.forEach( ( timeStamp ) => {
-					const date = new Date( timeStamp * 1000 );
-					const dateBlock = new Date(
-						date.getFullYear(),
-						date.getMonth(),
-						date.getDate()
-					);
-					blockDates.push( dateBlock );
-				} );
-			}
-		}
+		let blockDates = mapBookingTimestampsToDates( hotel_settings.block_dates );
 		let calendarDefaultDate = [];
 		if ( elForm && elForm.querySelector( 'input[name="check_in_date"]' ).value && elForm.querySelector( 'input[name="check_out_date"]' ).value ) {
 			calendarDefaultDate = [elForm.querySelector( 'input[name="check_in_date"]' ).value, elForm.querySelector( 'input[name="check_out_date"]' ).value];
 		}
 		let showMonths = window.innerWidth >= 992 ? 2 : 1;
-		
-		roomCalendarPricing = flatpickr( elRoomCalendarPricing, {
-			dateFormat: 'Y/m/d',
+		// Inline pricing calendar is also a flatpickr range picker sharing locale/format config.
+		roomCalendarPricing = flatpickr( elRoomCalendarPricing, createFlatpickrConfig( {
+			dateFormat: FRONTEND_DATE_FORMAT,
+			parseDate: parseFlatpickrDate,
+			locale: FLATPICKR_LOCALE,
+		}, {
 			mode: 'range',
 			minDate: 'today',
 			inline: true,
 			disable: blockDates,
 			defaultDate: calendarDefaultDate,
 			showMonths: showMonths,
-			locale: {
-				firstDayOfWeek: 1,
-			},
-			onDayCreate: function(dObj, dStr, fpInstance, dayElem) {
-			    if (!minEndDatePlan) return;
-			    const date = dayElem.dateObj;
-			    // disable dates which smaller than minEndDatePlan
-			    if (date < minEndDatePlan) {
-			    	dayElem.classList.add('flatpickr-disabled');
-			    	dayElem.setAttribute('aria-disabled', 'true');
-			    }
-			},
+			onDayCreate: createMinEndDateDayCreateHandler(
+				() => minEndDatePlan
+			),
 			onReady: function ( selectedDates, dateStr, instance ) {
 				let month = instance.currentMonth + 1,
 					year = instance.currentYear;
@@ -306,13 +301,16 @@ const calendarPricing = () => {
 				}
 			},
 			onChange: function ( selectedDates, dateStr, instance ) {
-				if (selectedDates.length === 1) {
-	                const start = selectedDates[0];
-	                minEndDatePlan = new Date(start);
-	                minEndDatePlan.setDate(minEndDatePlan.getDate() + hotel_settings.min_booking_date);
-	                // redraw to trigger onDayCreate
-	                instance.redraw();
-		        }
+				if ( selectedDates.length === 1 ) {
+					minEndDatePlan = getMinEndDateFromStartDate(
+						selectedDates[ 0 ],
+						getMinBookingDays( hotel_settings.min_booking_date )
+					);
+					instance.redraw();
+				} else {
+					minEndDatePlan = null;
+					instance.redraw();
+				}
 				setCalendarDatePrice( instance, roomPricing );
 			},
 			onMonthChange: function ( selectedDates, dateStr, instance ) {
@@ -320,7 +318,7 @@ const calendarPricing = () => {
 					year = instance.currentYear;
 				fetchAndSetCalendarDatePrice( instance, roomId, month, year );
 			},
-		} );
+		} ) );
 	}
 };
 const fetchAndSetCalendarDatePrice = (
@@ -345,13 +343,13 @@ const fetchAndSetCalendarDatePrice = (
 				throw new Error( res.message );
 			}
 			const data = res.data;
-			roomPricing = data.pricing;
+			roomPricing = indexRoomPricingByDate( data.pricing );
 			setCalendarDatePrice( calendarInstance, roomPricing );
 			if ( undefined !== roomCalendarPricing ) {
 				elBtnsCalendarPricing.style.display = 'block';
 			}
 		} )
-		.catch( ( err ) => console.log( err ) )
+		.catch( ( err ) => console.error( err ) )
 		.finally( () => {
 			if ( undefined !== roomCalendarPricing ) {
 				hideCalendarOverlay( calendarInstance );
@@ -372,137 +370,54 @@ const hideCalendarOverlay = ( calendarInstance ) => {
 	let overlay = calendar.querySelector( '.wphb-single-room-loading-overlay' );
 	if ( overlay ) overlay.remove();
 };
+const htmlDecodeElement = document.createElement( 'textarea' );
+const getPricingDateKey = ( dateValue ) => {
+	if ( ! dateValue ) {
+		return '';
+	}
+
+	if ( dateValue instanceof Date && ! Number.isNaN( dateValue.getTime() ) ) {
+		const year = dateValue.getFullYear();
+		const month = String( dateValue.getMonth() + 1 ).padStart( 2, '0' );
+		const day = String( dateValue.getDate() ).padStart( 2, '0' );
+
+		return `${ year }-${ month }-${ day }`;
+	}
+
+	return String( dateValue ).slice( 0, 10 );
+};
+const indexRoomPricingByDate = ( pricing = [] ) =>
+	( Array.isArray( pricing ) ? pricing : [] ).reduce( ( acc, priceItem ) => {
+		const pricingDateKey = getPricingDateKey( priceItem?.date );
+
+		if ( pricingDateKey ) {
+			acc[ pricingDateKey ] = priceItem;
+		}
+
+		return acc;
+	}, {} );
 const setCalendarDatePrice = ( calendarInstance, pricing ) => {
 	const dayCells = calendarInstance.calendarContainer.querySelectorAll(
 		'.flatpickr-day:not(.hidden)'
 	);
-	dayCells.forEach( ( dayElem, idx ) => {
+	dayCells.forEach( ( dayElem ) => {
 		const dateObj = dayElem.dateObj;
-		// Skip if dateObj is missing
-		if ( ! dateObj || undefined === pricing[ idx ] ) {
+		const pricingDateKey = getPricingDateKey( dateObj );
+		const pricingItem = pricing?.[ pricingDateKey ];
+
+		if ( ! dateObj || ! pricingItem ) {
 			return;
 		}
+
 		dayElem.setAttribute(
 			'data-title',
-			decodeHtmlEntity( pricing[ idx ].price_html )
+			decodeHtmlEntity( pricingItem.price_html )
 		);
 	} );
 };
 const decodeHtmlEntity = ( str ) => {
-	return new DOMParser().parseFromString( str, 'text/html' ).body.textContent;
-};
-const wphbRoomCheckDates = ( formCheckDate ) => {
-	const elBtnCheck = formCheckDate.querySelector( 'button[type=submit]' );
-	let elLoading = formCheckDate.querySelector( '.wphb-icon' );
-
-	if ( ! elLoading ) {
-		elBtnCheck.insertAdjacentHTML(
-			'afterbegin',
-			'<span class="dashicons dashicons-update hide wphb-icon"></span>'
-		);
-		elLoading = elBtnCheck.querySelector( '.wphb-icon' );
-	}
-
-	elLoading.classList.remove( 'hide' );
-	elLoading.classList.toggle( 'loading' );
-	elBtnCheck.setAttribute( 'disabled', 'disabled' );
-
-	const showErrors = ( message ) => {
-		const elMesErrors = formCheckDate.querySelectorAll(
-			'.hotel_booking_room_errors'
-		);
-		if ( elMesErrors ) {
-			elMesErrors.forEach( ( el ) => {
-				el.remove();
-			} );
-		}
-
-		formCheckDate
-			.querySelector( '.hb-booking-room-form-head' )
-			.insertAdjacentHTML(
-				'beforeend',
-				`<div class="hotel_booking_room_errors">${ message }</div>`
-			);
-
-		setTimeout( () => {
-			formCheckDate
-				.querySelector( '.hotel_booking_room_errors' )
-				.remove();
-		}, 2500 );
-	};
-
-	// Send to sever
-	const option = handleBookingFormData( formCheckDate );
-
-	fetch( hotel_settings.ajax, option )
-		.then( ( response ) => response.json() )
-		.then( ( res ) => {
-			const { status, message, data } = res;
-
-			if ( status === 'error' ) {
-				showErrors( message );
-				return;
-			}
-
-			if ( ! elAddToCart ) {
-				elHotelBookingRoom.insertAdjacentHTML(
-					'beforeend',
-					data.html_extra
-				);
-			}
-
-			elAddToCart = elHotelBookingRoom.querySelector(
-				'.wpdb-room-tmpl-add-to-cart'
-			);
-			if ( ! elAddToCart ) {
-				return;
-			}
-
-			// set list qty for room
-			const elNumRoom = elAddToCart.querySelector(
-				'input[name=hb-num-of-rooms]'
-			);
-			if ( elNumRoom ) {
-				const elQtyMax = elAddToCart.querySelector( '.qty-max' );
-				if ( elQtyMax ) {
-					elQtyMax.textContent = data.qty;
-				}
-				// for ( let i = 1; i <= parseInt( data.qty ); i++ ) {
-				// 	elNumRoom.insertAdjacentHTML( 'beforeend', '<option value="' + i + '">' + i + '</option>' );
-				// }
-				elNumRoom.setAttribute( 'max', data.qty );
-			}
-
-			// Set dates checked
-			const elDatesChecked = elAddToCart.querySelector(
-				'.wphb-room-dates-checked'
-			);
-			if ( elDatesChecked ) {
-				elDatesChecked.innerHTML = data.dates_booked;
-			} else {
-				formCheckDate.insertAdjacentHTML(
-					'beforebegin',
-					data.dates_booked
-				);
-			}
-
-			if ( elTmplDateAvailable ) {
-				elTmplDateAvailable.style.display = 'none';
-			} else {
-				formCheckDate.style.display = 'none';
-			}
-			elAddToCart.style.display = 'block';
-		} )
-		.catch( ( error ) => {
-			showErrors( error );
-		} )
-		.finally( () => {
-			elBtnCheck.removeAttribute( 'disabled' );
-			if ( elLoading ) {
-				elLoading.classList.add( 'hide' );
-				elLoading.classList.toggle( 'loading' );
-			}
-		} );
+	htmlDecodeElement.innerHTML = str;
+	return htmlDecodeElement.value;
 };
 const wphbRoomAddToCart = ( formAddToCart ) => {
 	const elBtnSubmit = formAddToCart.querySelector( 'button[type=submit]' );
@@ -533,7 +448,13 @@ const wphbRoomAddToCart = ( formAddToCart ) => {
 	};
 
 	// Send to sever
-	const option = handleBookingFormData( formAddToCart );
+	let option;
+	try {
+		option = handleBookingFormData( formAddToCart );
+	} catch ( error ) {
+		showErrors( error.message || String( error ) );
+		return;
+	}
 
 	elBtnSubmit.setAttribute( 'disabled', 'disabled' );
 	elLoading.classList.remove( 'hide' );
@@ -548,7 +469,6 @@ const wphbRoomAddToCart = ( formAddToCart ) => {
 				elBtnSubmit.removeAttribute( 'disabled' );
 				return;
 			}
-
 			window.location.href = data.redirect;
 		} )
 		.catch( ( error ) => {
@@ -561,6 +481,11 @@ const wphbRoomAddToCart = ( formAddToCart ) => {
 };
 
 const handleBookingFormData = ( form ) => {
+	const normalizedDates = validateAndNormalizeBookingDateRange( form );
+	if ( normalizedDates.error ) {
+		throw new Error( normalizedDates.error );
+	}
+
 	let dataSend = {};
 	const data = new FormData( form );
 	for ( const pair of data.entries() ) {
@@ -570,6 +495,8 @@ const handleBookingFormData = ( form ) => {
 
 		dataSend[ key ] = value;
 	}
+	dataSend.check_in_date = normalizedDates.checkInDate;
+	dataSend.check_out_date = normalizedDates.checkOutDate;
 	const dataSendFrom = new FormData();
 	Object.entries( dataSend ).forEach( ( [ key, value ] ) => {
 		dataSendFrom.append( key, value );
@@ -586,7 +513,13 @@ const handleBookingFormData = ( form ) => {
 }
 //calculate room price without tax
 const calculateBookingPrice = ( elForm ) => {
-	const option = handleBookingFormData( elForm );
+	let option;
+	try {
+		option = handleBookingFormData( elForm );
+	} catch ( error ) {
+		alert( error.message || String( error ) );
+		return;
+	}
     elForm.querySelector( '.wphb-single-room-loading-overlay' ).classList.remove( 'hidden' );
     fetch( `${hotel_settings.wphb_rest_url}wphb/v1/rooms/calculate-booking-price`, option )
     	.then( ( response ) => response.json() )
@@ -601,12 +534,21 @@ const calculateBookingPrice = ( elForm ) => {
     		elForm.querySelector( '.wphb-max-qty .qty-max' ).innerHTML = data.available_qty;
     		elForm.querySelector( '.hb-total-price-value' ).innerHTML = data.amount_html;
     	} )
-    	.catch( ( error ) => {} ) .finally( () => { elForm.querySelector( '.wphb-single-room-loading-overlay' ).classList.add( 'hidden' ); } );
+    	.catch( ( error ) => {
+			console.error( error );
+		} )
+		.finally( () => { elForm.querySelector( '.wphb-single-room-loading-overlay' ).classList.add( 'hidden' ); } );
 }
 
 const getRoomBookingPriceDetails = ( button ) => {
 	let form = button.closest( 'form' );
-	const option = handleBookingFormData( form );
+	let option;
+	try {
+		option = handleBookingFormData( form );
+	} catch ( error ) {
+		alert( error.message || String( error ) );
+		return;
+	}
 	const iconLoading = button.querySelector('.dashicons.dashicons-update.hide.wphb-icon');
 	iconLoading.classList.toggle('hide');
 	iconLoading.classList.toggle('loading');
@@ -616,12 +558,15 @@ const getRoomBookingPriceDetails = ( button ) => {
 		.then( ( res ) => {
 			const { status, message, data } = res;
 			if ( status === 'error' ) {
-				console.log( message );
+				console.error( message );
 				return;
 			}
 			button.closest('.hb_view_price.hb-room-content').insertAdjacentHTML( 'beforeend', data.price_html );
 		} )
-		.catch( ( error ) => {} ) .finally( () => {
+		.catch( ( error ) => {
+			console.error( error );
+		} )
+		.finally( () => {
 			iconLoading.classList.toggle('hide');
 			iconLoading.classList.toggle('loading');
 		} );
@@ -634,7 +579,6 @@ document.addEventListener( 'submit', function ( e ) {
 	if ( target.name === 'hb-search-single-room' ) {
 		e.preventDefault();
 		wphbRoomAddToCart( target );
-		// wphbRoomCheckDates( target );
 	}
 
 	if ( target.name === 'hb-search-results' ) {
@@ -706,7 +650,7 @@ document.addEventListener( 'click', function ( e ) {
 		modalPreview.open();
 	} else if ( target.classList.contains( 'hb-btn-cancel' ) ) {
 		if ( undefined !== roomCalendarPricing ) {
-			minEndDatePlan = false;
+			minEndDatePlan = null;
 			roomCalendarPricing.clear();
 		}
 	} else if ( target.classList.contains( 'hb-btn-apply' ) ) {

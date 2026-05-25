@@ -1,11 +1,610 @@
 /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
-/***/ "./assets/js/utils.js":
+/***/ "./assets/js/frontend/flatpickr-locale-utils.js"
+/*!******************************************************!*\
+  !*** ./assets/js/frontend/flatpickr-locale-utils.js ***!
+  \******************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   FLATPICKR_RANGE_SEPARATOR: () => (/* binding */ FLATPICKR_RANGE_SEPARATOR),
+/* harmony export */   applyFlatpickrLocaleConfig: () => (/* binding */ applyFlatpickrLocaleConfig),
+/* harmony export */   applyMinEndDateToDayElement: () => (/* binding */ applyMinEndDateToDayElement),
+/* harmony export */   buildLocaleCandidates: () => (/* binding */ buildLocaleCandidates),
+/* harmony export */   createBookingDateHelpers: () => (/* binding */ createBookingDateHelpers),
+/* harmony export */   createFlatpickrConfig: () => (/* binding */ createFlatpickrConfig),
+/* harmony export */   createFlatpickrLocaleConfig: () => (/* binding */ createFlatpickrLocaleConfig),
+/* harmony export */   createMinEndDateDayCreateHandler: () => (/* binding */ createMinEndDateDayCreateHandler),
+/* harmony export */   formatDateRangeValue: () => (/* binding */ formatDateRangeValue),
+/* harmony export */   getBookingDateFields: () => (/* binding */ getBookingDateFields),
+/* harmony export */   getBrowserLocales: () => (/* binding */ getBrowserLocales),
+/* harmony export */   getFlatpickrFirstDayOfWeekFromObject: () => (/* binding */ getFlatpickrFirstDayOfWeekFromObject),
+/* harmony export */   getMinBookingDays: () => (/* binding */ getMinBookingDays),
+/* harmony export */   getMinEndDateFromStartDate: () => (/* binding */ getMinEndDateFromStartDate),
+/* harmony export */   mapBookingTimestampsToDates: () => (/* binding */ mapBookingTimestampsToDates),
+/* harmony export */   normalizeBookingDateFieldsForSubmit: () => (/* binding */ normalizeBookingDateFieldsForSubmit),
+/* harmony export */   normalizeBookingDateInputValue: () => (/* binding */ normalizeBookingDateInputValue),
+/* harmony export */   parseDateStrict: () => (/* binding */ parseDateStrict),
+/* harmony export */   parseDateStringStrict: () => (/* binding */ parseDateStringStrict),
+/* harmony export */   resolveBrowserLocaleConfig: () => (/* binding */ resolveBrowserLocaleConfig),
+/* harmony export */   splitDateRangeValue: () => (/* binding */ splitDateRangeValue),
+/* harmony export */   syncBookingDateFieldsForUi: () => (/* binding */ syncBookingDateFieldsForUi),
+/* harmony export */   validateBookingDateRange: () => (/* binding */ validateBookingDateRange)
+/* harmony export */ });
+const FLATPICKR_RANGE_SEPARATOR = '-';
+const FLATPICKR_BROWSER_LOCALE_ALIASES = {
+  // flatpickr uses `vn` for Vietnamese instead of `vi`.
+  vi: 'vn',
+  'vi-vn': 'vn',
+  vi_vn: 'vn'
+};
+
+/**
+ * Normalize locale keys so matching works across `vi_VN`, `vi-vn`, `VI-vn`, etc.
+ */
+const normalizeLocaleKey = localeKey => String(localeKey || '').trim().replace(/_/g, '-').toLowerCase();
+
+/**
+ * Detect a single locale config object (has month/week labels) rather than a locale map.
+ */
+const isFlatpickrSingleLocaleConfig = localeConfig => Boolean(localeConfig && typeof localeConfig === 'object' && (localeConfig.weekdays || localeConfig.months));
+
+/**
+ * Detect a locale map object where keys are locale ids (`en`, `fr`, `vn`, ...).
+ */
+const isFlatpickrLocaleMap = localeMap => Boolean(localeMap && typeof localeMap === 'object' && !isFlatpickrSingleLocaleConfig(localeMap) && Object.keys(localeMap).length > 0);
+
+/**
+ * Unwrap locale modules that may be nested by bundler interop (`default.default`).
+ */
+const unwrapFlatpickrLocaleModule = (flatpickrLocales = {}) => {
+  let localeSource = flatpickrLocales;
+  let maxDepth = 5;
+
+  // Support nested UMD/ESM interop wrappers such as `default.default`.
+  while (maxDepth > 0 && localeSource && typeof localeSource === 'object' && localeSource.default && typeof localeSource.default === 'object') {
+    const rootKeys = Object.keys(localeSource).filter(key => key !== '__esModule');
+    const defaultLocaleSource = localeSource.default;
+    const defaultLooksLikeLocaleSource = isFlatpickrLocaleMap(defaultLocaleSource) || isFlatpickrSingleLocaleConfig(defaultLocaleSource);
+    const shouldUnwrapBySingleDefaultKey = rootKeys.length === 1 && rootKeys[0] === 'default';
+    const shouldUnwrapByNonLocaleWrapper = !isFlatpickrLocaleMap(localeSource) && defaultLooksLikeLocaleSource;
+    if (!shouldUnwrapBySingleDefaultKey && !shouldUnwrapByNonLocaleWrapper) {
+      break;
+    }
+    localeSource = defaultLocaleSource;
+    maxDepth--;
+  }
+  return localeSource;
+};
+
+/**
+ * Return a normalized locale map regardless of module export shape.
+ */
+const extractFlatpickrLocalesMap = (flatpickrLocales = {}) => {
+  let localeSource = unwrapFlatpickrLocaleModule(flatpickrLocales);
+  if (localeSource && typeof localeSource === 'object' && localeSource.default && typeof localeSource.default === 'object') {
+    const rootLooksLikeLocaleMap = isFlatpickrLocaleMap(localeSource);
+    const defaultLooksLikeLocaleMap = isFlatpickrLocaleMap(localeSource.default);
+
+    // Use default export only when the root object is a module wrapper.
+    if (!rootLooksLikeLocaleMap && defaultLooksLikeLocaleMap) {
+      localeSource = localeSource.default;
+    }
+  }
+  if (isFlatpickrSingleLocaleConfig(localeSource)) {
+    return {
+      default: localeSource,
+      en: localeSource
+    };
+  }
+  if (isFlatpickrLocaleMap(localeSource)) {
+    return localeSource;
+  }
+  return {};
+};
+
+/**
+ * Preserve insertion order while removing duplicates.
+ */
+const uniq = values => values.filter((value, index) => values.indexOf(value) === index);
+
+/**
+ * Convert and validate first day of week from admin settings (0..6).
+ */
+const getFlatpickrFirstDayOfWeekFromObject = (firstDayOfWeek, fallback = 1) => {
+  const parsed = Number.parseInt(firstDayOfWeek, 10);
+  if (Number.isNaN(parsed) || parsed < 0 || parsed > 6) {
+    return fallback;
+  }
+  return parsed;
+};
+
+/**
+ * Read browser locale preferences in priority order.
+ */
+const getBrowserLocales = () => {
+  if (typeof navigator === 'undefined') {
+    return [];
+  }
+  if (Array.isArray(navigator.languages) && navigator.languages.length) {
+    return navigator.languages;
+  }
+  if (navigator.language) {
+    return [navigator.language];
+  }
+  return [];
+};
+
+/**
+ * Build locale lookup candidates from browser locales:
+ * full locale -> alias -> base locale -> base alias -> `en`.
+ */
+const buildLocaleCandidates = (browserLocales = []) => {
+  const localeList = Array.isArray(browserLocales) ? browserLocales : [browserLocales];
+  const candidates = [];
+  localeList.forEach(localeItem => {
+    const normalized = normalizeLocaleKey(localeItem);
+    if (!normalized) {
+      return;
+    }
+    candidates.push(normalized);
+    const alias = FLATPICKR_BROWSER_LOCALE_ALIASES[normalized];
+    if (alias) {
+      candidates.push(alias);
+    }
+    const baseLocale = normalized.split('-')[0];
+    if (baseLocale && baseLocale !== normalized) {
+      // Example: `fr-CA` -> `fr` fallback when region-specific key is missing.
+      candidates.push(baseLocale);
+      const baseAlias = FLATPICKR_BROWSER_LOCALE_ALIASES[baseLocale];
+      if (baseAlias) {
+        candidates.push(baseAlias);
+      }
+    }
+  });
+  candidates.push('en');
+  return uniq(candidates);
+};
+
+/**
+ * Resolve the best matching locale config from browser locales.
+ */
+const resolveBrowserLocaleConfig = (flatpickrLocales = {}, browserLocales = []) => {
+  const rawLocales = extractFlatpickrLocalesMap(flatpickrLocales);
+  const localeConfigMap = {};
+  Object.keys(rawLocales).forEach(localeKey => {
+    localeConfigMap[normalizeLocaleKey(localeKey)] = rawLocales[localeKey];
+  });
+
+  // Pick the first matched browser locale, then fallback to English.
+  const candidates = buildLocaleCandidates(browserLocales);
+  const matchedLocaleKey = candidates.find(candidate => localeConfigMap[candidate]) || 'en';
+  const matchedLocaleConfig = localeConfigMap[matchedLocaleKey] || localeConfigMap.en || rawLocales.en || {};
+  return {
+    localeKey: matchedLocaleKey,
+    localeConfig: {
+      ...matchedLocaleConfig
+    }
+  };
+};
+
+/**
+ * Create final flatpickr locale config merged with admin-controlled values.
+ */
+const createFlatpickrLocaleConfig = (flatpickrLocales = {}, firstDayOfWeek = 1) => {
+  const {
+    localeConfig
+  } = resolveBrowserLocaleConfig(flatpickrLocales, getBrowserLocales());
+  const parsedFirstDayOfWeek = getFlatpickrFirstDayOfWeekFromObject(firstDayOfWeek, 1);
+  return {
+    ...localeConfig,
+    firstDayOfWeek: parsedFirstDayOfWeek,
+    rangeSeparator: FLATPICKR_RANGE_SEPARATOR
+  };
+};
+
+/**
+ * Apply locale config globally and ensure current defaults keep week start/separator.
+ */
+const applyFlatpickrLocaleConfig = (flatpickrInstance, localeConfig = {}) => {
+  if (!flatpickrInstance || !localeConfig) {
+    return;
+  }
+  flatpickrInstance.localize(localeConfig);
+  if (flatpickrInstance.l10ns && flatpickrInstance.l10ns.default) {
+    flatpickrInstance.l10ns.default.firstDayOfWeek = localeConfig.firstDayOfWeek;
+    flatpickrInstance.l10ns.default.rangeSeparator = localeConfig.rangeSeparator;
+  }
+};
+
+/**
+ * Strictly parse date by format and verify by format round-trip.
+ */
+const parseDateStrict = (flatpickrInstance, value, format) => {
+  if (!flatpickrInstance || !value || !format) {
+    return null;
+  }
+  const parsed = flatpickrInstance.parseDate(value, format, true);
+  if (!parsed) {
+    return null;
+  }
+
+  // Round-trip validation prevents ambiguous dates like 03/04/2026 from being misread.
+  return flatpickrInstance.formatDate(parsed, format) === value ? parsed : null;
+};
+
+/**
+ * Strictly parse supported booking date formats without depending on flatpickr runtime.
+ */
+const parseDateStringStrict = (value, format) => {
+  const dateValue = String(value || '').trim();
+  const dateFormat = String(format || '').trim();
+  if (!dateValue || !dateFormat) {
+    return null;
+  }
+  let regexPattern = '';
+  const escapedRegexChar = /[.*+?^${}()|[\]\\]/g;
+  for (let i = 0; i < dateFormat.length; i++) {
+    const token = dateFormat[i];
+    if (token === 'Y') {
+      regexPattern += '(?<year>\\d{4})';
+    } else if (token === 'm') {
+      regexPattern += '(?<month>\\d{1,2})';
+    } else if (token === 'd') {
+      regexPattern += '(?<day>\\d{1,2})';
+    } else {
+      regexPattern += token.replace(escapedRegexChar, '\\$&');
+    }
+  }
+  const matched = dateValue.match(new RegExp(`^${regexPattern}$`));
+  if (!matched || !matched.groups) {
+    return null;
+  }
+  const year = Number.parseInt(matched.groups.year || '', 10);
+  const month = Number.parseInt(matched.groups.month || '', 10);
+  const day = Number.parseInt(matched.groups.day || '', 10);
+  if (!year || !month || !day) {
+    return null;
+  }
+  const parsed = new Date(year, month - 1, day);
+  if (parsed.getFullYear() !== year || parsed.getMonth() !== month - 1 || parsed.getDate() !== day) {
+    return null;
+  }
+  return parsed;
+};
+
+/**
+ * Normalize a raw booking date string into internal submit format.
+ */
+const normalizeBookingDateInputValue = (value, frontendDateFormat, internalDateFormat = 'Y/m/d') => {
+  const dateValue = String(value || '').trim();
+  if (!dateValue) {
+    return '';
+  }
+  const formats = [frontendDateFormat, internalDateFormat].filter((format, index, arr) => format && arr.indexOf(format) === index);
+  for (let i = 0; i < formats.length; i++) {
+    const parsed = parseDateStringStrict(dateValue, formats[i]);
+    if (parsed) {
+      const year = parsed.getFullYear();
+      const month = String(parsed.getMonth() + 1).padStart(2, '0');
+      const day = String(parsed.getDate()).padStart(2, '0');
+      return `${year}/${month}/${day}`;
+    }
+  }
+  return '';
+};
+const getBookingDateFieldSelector = (selector, fallback) => String(selector || fallback || '').trim() || fallback;
+
+/**
+ * Read check-in/check-out inputs from a form or any container node.
+ */
+const getBookingDateFields = (container, {
+  checkInSelector = 'input[name="check_in_date"]',
+  checkOutSelector = 'input[name="check_out_date"]'
+} = {}) => {
+  if (!container || typeof container.querySelector !== 'function') {
+    return {
+      checkInField: null,
+      checkOutField: null
+    };
+  }
+  return {
+    checkInField: container.querySelector(getBookingDateFieldSelector(checkInSelector, 'input[name="check_in_date"]')),
+    checkOutField: container.querySelector(getBookingDateFieldSelector(checkOutSelector, 'input[name="check_out_date"]'))
+  };
+};
+
+/**
+ * Normalize booking inputs into canonical submit format and write back to the fields.
+ */
+const normalizeBookingDateFieldsForSubmit = (container, frontendDateFormat, internalDateFormat = 'Y/m/d', selectors = {}, {
+  writeBack = true
+} = {}) => {
+  const {
+    checkInField,
+    checkOutField
+  } = getBookingDateFields(container, selectors);
+  const checkInDate = normalizeBookingDateInputValue(checkInField?.value, frontendDateFormat, internalDateFormat);
+  const checkOutDate = normalizeBookingDateInputValue(checkOutField?.value, frontendDateFormat, internalDateFormat);
+  if (writeBack && checkInField && checkInDate) {
+    checkInField.value = checkInDate;
+  }
+  if (writeBack && checkOutField && checkOutDate) {
+    checkOutField.value = checkOutDate;
+  }
+  return {
+    checkInField,
+    checkOutField,
+    checkInDate,
+    checkOutDate
+  };
+};
+
+/**
+ * Build parse/format helpers for booking fields and submit payloads.
+ */
+const createBookingDateHelpers = (flatpickrInstance, frontendDateFormat, internalDateFormat) => {
+  const parseBookingDateValue = value => {
+    const dateValue = String(value || '').trim();
+    if (!dateValue) {
+      return null;
+    }
+    const formats = [frontendDateFormat, internalDateFormat].filter((format, index, arr) => format && arr.indexOf(format) === index);
+    for (let i = 0; i < formats.length; i++) {
+      const parsed = parseDateStrict(flatpickrInstance, dateValue, formats[i]);
+      if (parsed) {
+        return parsed;
+      }
+    }
+    return null;
+  };
+
+  // Reuse strict parser first, then fallback to flatpickr parser for UI operations.
+  const parseFlatpickrDate = (value, format) => {
+    if (value instanceof Date) {
+      return value;
+    }
+    const parsed = parseBookingDateValue(value);
+    if (parsed) {
+      return parsed;
+    }
+    return flatpickrInstance.parseDate(value, format || frontendDateFormat, true);
+  };
+  const formatBookingDate = (date, format = frontendDateFormat) => flatpickrInstance.formatDate(date, format);
+  const formatBookingDateForUi = date => flatpickrInstance.formatDate(date, frontendDateFormat);
+  const formatBookingDateForSubmit = date => flatpickrInstance.formatDate(date, internalDateFormat);
+  return {
+    parseBookingDateValue,
+    parseFlatpickrDate,
+    formatBookingDate,
+    formatBookingDateForUi,
+    formatBookingDateForSubmit
+  };
+};
+
+/**
+ * Normalize prefilled booking inputs into the active UI format before flatpickr binds.
+ */
+const syncBookingDateFieldsForUi = ({
+  checkInField = null,
+  checkOutField = null,
+  rangeField = null,
+  rangeSeparator = FLATPICKR_RANGE_SEPARATOR
+}, {
+  parseBookingDateValue,
+  formatBookingDateForUi
+}) => {
+  const parsedCheckInDate = parseBookingDateValue?.(checkInField?.value);
+  const parsedCheckOutDate = parseBookingDateValue?.(checkOutField?.value);
+  if (parsedCheckInDate && checkInField) {
+    checkInField.value = formatBookingDateForUi(parsedCheckInDate);
+  }
+  if (parsedCheckOutDate && checkOutField) {
+    checkOutField.value = formatBookingDateForUi(parsedCheckOutDate);
+  }
+  if (rangeField && parsedCheckInDate && parsedCheckOutDate) {
+    rangeField.value = formatDateRangeValue(formatBookingDateForUi(parsedCheckInDate), formatBookingDateForUi(parsedCheckOutDate), rangeSeparator);
+  }
+  return {
+    parsedCheckInDate,
+    parsedCheckOutDate
+  };
+};
+
+/**
+ * Validate booking dates with strict parsing and optionally rewrite inputs for submit.
+ */
+const validateBookingDateRange = (container, {
+  parseBookingDateValue,
+  formatBookingDateForSubmit,
+  checkInSelector = 'input[name="check_in_date"]',
+  checkOutSelector = 'input[name="check_out_date"]',
+  emptyCheckInMessage = 'Please select check in date.',
+  emptyCheckOutMessage = 'Please select check out date.',
+  invalidRangeMessage = 'Check out date must be greater than the check in.',
+  toggleErrorClass = false,
+  normalizeFieldValues = false
+} = {}) => {
+  const {
+    checkInField,
+    checkOutField
+  } = getBookingDateFields(container, {
+    checkInSelector,
+    checkOutSelector
+  });
+  if (!checkInField || !checkOutField) {
+    return {
+      ok: false,
+      error: invalidRangeMessage,
+      checkInField,
+      checkOutField,
+      checkInDate: '',
+      checkOutDate: ''
+    };
+  }
+  if (toggleErrorClass) {
+    checkInField.classList.remove('error');
+    checkOutField.classList.remove('error');
+  }
+  const checkInDateObject = parseBookingDateValue?.(checkInField.value);
+  if (!checkInDateObject) {
+    if (toggleErrorClass) {
+      checkInField.classList.add('error');
+    }
+    return {
+      ok: false,
+      error: emptyCheckInMessage,
+      checkInField,
+      checkOutField,
+      checkInDate: '',
+      checkOutDate: ''
+    };
+  }
+  const checkOutDateObject = parseBookingDateValue?.(checkOutField.value);
+  if (!checkOutDateObject) {
+    if (toggleErrorClass) {
+      checkOutField.classList.add('error');
+    }
+    return {
+      ok: false,
+      error: emptyCheckOutMessage,
+      checkInField,
+      checkOutField,
+      checkInDate: '',
+      checkOutDate: ''
+    };
+  }
+  const checkInDate = formatBookingDateForSubmit?.(checkInDateObject) || '';
+  const checkOutDate = formatBookingDateForSubmit?.(checkOutDateObject) || '';
+  if (!checkInDate || !checkOutDate || checkOutDate <= checkInDate) {
+    if (toggleErrorClass) {
+      checkInField.classList.add('error');
+      checkOutField.classList.add('error');
+    }
+    return {
+      ok: false,
+      error: invalidRangeMessage,
+      checkInField,
+      checkOutField,
+      checkInDate,
+      checkOutDate
+    };
+  }
+  if (normalizeFieldValues) {
+    checkInField.value = checkInDate;
+    checkOutField.value = checkOutDate;
+  }
+  return {
+    ok: true,
+    error: '',
+    checkInField,
+    checkOutField,
+    checkInDate,
+    checkOutDate
+  };
+};
+
+/**
+ * Build a standard flatpickr config so all pickers share parser, locale, and defaults.
+ */
+const createFlatpickrConfig = ({
+  dateFormat,
+  parseDate,
+  locale,
+  disableMobile = true
+} = {}, overrides = {}) => ({
+  dateFormat,
+  parseDate,
+  disableMobile,
+  locale,
+  ...overrides
+});
+
+/**
+ * Join two date values into one range string using configured separator.
+ */
+const formatDateRangeValue = (startDateValue = '', endDateValue = '', rangeSeparator = FLATPICKR_RANGE_SEPARATOR) => `${String(startDateValue || '')}${String(rangeSeparator || FLATPICKR_RANGE_SEPARATOR)}${String(endDateValue || '')}`;
+
+/**
+ * Split a range string into date parts while handling regex-special separators safely.
+ */
+const splitDateRangeValue = (dateRangeValue = '', rangeSeparator = FLATPICKR_RANGE_SEPARATOR) => {
+  const rawValue = String(dateRangeValue || '').trim();
+  if (!rawValue) {
+    return [];
+  }
+
+  // Escape separators like `-`, `.`, `|` before building the split regex.
+  const escapedSeparator = String(rangeSeparator || FLATPICKR_RANGE_SEPARATOR).replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+  const splitBySeparatorRegex = new RegExp(`\\s*${escapedSeparator}\\s*`);
+  return rawValue.split(splitBySeparatorRegex).map(value => value.trim()).filter(Boolean);
+};
+
+/**
+ * Convert Unix timestamps (seconds) into calendar-only Date objects for flatpickr disable lists.
+ */
+const mapBookingTimestampsToDates = (timestamps = []) => (Array.isArray(timestamps) ? timestamps : []).map(timestamp => {
+  const parsedTimestamp = Number.parseInt(timestamp, 10);
+  if (Number.isNaN(parsedTimestamp)) {
+    return null;
+  }
+  const date = new Date(parsedTimestamp * 1000);
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}).filter(Boolean);
+
+/**
+ * Normalize min-stay settings so `0` or invalid values fall back to one night.
+ */
+const getMinBookingDays = (minBookingDate, fallback = 1) => {
+  const parsedValue = Number.parseInt(minBookingDate, 10);
+  if (Number.isNaN(parsedValue) || parsedValue <= 0) {
+    return fallback;
+  }
+  return parsedValue;
+};
+
+/**
+ * Compute the earliest allowed end date for a selected start date.
+ */
+const getMinEndDateFromStartDate = (startDate, minBookingDays = 1) => {
+  if (!(startDate instanceof Date) || Number.isNaN(startDate.getTime())) {
+    return null;
+  }
+  const minEndDate = new Date(startDate);
+  minEndDate.setDate(minEndDate.getDate() + getMinBookingDays(minBookingDays));
+  return minEndDate;
+};
+
+/**
+ * Disable calendar cells that fall before the current minimum end date.
+ */
+const applyMinEndDateToDayElement = (dayElem, minEndDate) => {
+  if (!dayElem || !dayElem.dateObj || !minEndDate || !(minEndDate instanceof Date) || Number.isNaN(minEndDate.getTime())) {
+    return;
+  }
+  if (dayElem.dateObj < minEndDate) {
+    dayElem.classList.add('flatpickr-disabled');
+    dayElem.setAttribute('aria-disabled', 'true');
+  }
+};
+
+/**
+ * Create an `onDayCreate` handler that reads min-end-date state from a callback.
+ */
+const createMinEndDateDayCreateHandler = getMinEndDate => (dObj, dStr, fpInstance, dayElem) => {
+  applyMinEndDateToDayElement(dayElem, getMinEndDate?.() || null);
+};
+
+/***/ },
+
+/***/ "./assets/js/utils.js"
 /*!****************************!*\
   !*** ./assets/js/utils.js ***!
   \****************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
@@ -202,13 +801,13 @@ const wphbRenderPriceNumber = price => {
 };
 
 
-/***/ }),
+/***/ },
 
-/***/ "./node_modules/flatpickr/dist/esm/index.js":
+/***/ "./node_modules/flatpickr/dist/esm/index.js"
 /*!**************************************************!*\
   !*** ./node_modules/flatpickr/dist/esm/index.js ***!
   \**************************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
@@ -2271,13 +2870,13 @@ if (typeof window !== "undefined") {
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (flatpickr);
 
 
-/***/ }),
+/***/ },
 
-/***/ "./node_modules/flatpickr/dist/esm/l10n/default.js":
+/***/ "./node_modules/flatpickr/dist/esm/l10n/default.js"
 /*!*********************************************************!*\
   !*** ./node_modules/flatpickr/dist/esm/l10n/default.js ***!
   \*********************************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
@@ -2359,13 +2958,13 @@ var english = {
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (english);
 
 
-/***/ }),
+/***/ },
 
-/***/ "./node_modules/flatpickr/dist/esm/types/options.js":
+/***/ "./node_modules/flatpickr/dist/esm/types/options.js"
 /*!**********************************************************!*\
   !*** ./node_modules/flatpickr/dist/esm/types/options.js ***!
   \**********************************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
@@ -2458,13 +3057,13 @@ var defaults = {
 };
 
 
-/***/ }),
+/***/ },
 
-/***/ "./node_modules/flatpickr/dist/esm/utils/dates.js":
+/***/ "./node_modules/flatpickr/dist/esm/utils/dates.js"
 /*!********************************************************!*\
   !*** ./node_modules/flatpickr/dist/esm/utils/dates.js ***!
   \********************************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
@@ -2627,13 +3226,13 @@ function getDefaultHours(config) {
 }
 
 
-/***/ }),
+/***/ },
 
-/***/ "./node_modules/flatpickr/dist/esm/utils/dom.js":
+/***/ "./node_modules/flatpickr/dist/esm/utils/dom.js"
 /*!******************************************************!*\
   !*** ./node_modules/flatpickr/dist/esm/utils/dom.js ***!
   \******************************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
@@ -2701,13 +3300,13 @@ function getEventTarget(event) {
 }
 
 
-/***/ }),
+/***/ },
 
-/***/ "./node_modules/flatpickr/dist/esm/utils/formatting.js":
+/***/ "./node_modules/flatpickr/dist/esm/utils/formatting.js"
 /*!*************************************************************!*\
   !*** ./node_modules/flatpickr/dist/esm/utils/formatting.js ***!
   \*************************************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
@@ -2854,13 +3453,13 @@ var formats = {
 };
 
 
-/***/ }),
+/***/ },
 
-/***/ "./node_modules/flatpickr/dist/esm/utils/index.js":
+/***/ "./node_modules/flatpickr/dist/esm/utils/index.js"
 /*!********************************************************!*\
   !*** ./node_modules/flatpickr/dist/esm/utils/index.js ***!
   \********************************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
@@ -2889,13 +3488,13 @@ var arrayify = function (obj) {
 };
 
 
-/***/ }),
+/***/ },
 
-/***/ "./node_modules/flatpickr/dist/esm/utils/polyfills.js":
+/***/ "./node_modules/flatpickr/dist/esm/utils/polyfills.js"
 /*!************************************************************!*\
   !*** ./node_modules/flatpickr/dist/esm/utils/polyfills.js ***!
   \************************************************************/
-/***/ (() => {
+() {
 
 "use strict";
 
@@ -2922,13 +3521,3831 @@ if (typeof Object.assign !== "function") {
 }
 
 
-/***/ }),
+/***/ },
 
-/***/ "./node_modules/tingle.js/dist/tingle.min.js":
+/***/ "./node_modules/flatpickr/dist/l10n/index.js"
+/*!***************************************************!*\
+  !*** ./node_modules/flatpickr/dist/l10n/index.js ***!
+  \***************************************************/
+(__unused_webpack_module, exports) {
+
+(function (global, factory) {
+     true ? factory(exports) :
+    0;
+}(this, (function (exports) { 'use strict';
+
+    /*! *****************************************************************************
+    Copyright (c) Microsoft Corporation.
+
+    Permission to use, copy, modify, and/or distribute this software for any
+    purpose with or without fee is hereby granted.
+
+    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+    REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+    AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+    INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+    LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+    OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+    PERFORMANCE OF THIS SOFTWARE.
+    ***************************************************************************** */
+
+    var __assign = function() {
+        __assign = Object.assign || function __assign(t) {
+            for (var s, i = 1, n = arguments.length; i < n; i++) {
+                s = arguments[i];
+                for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p)) t[p] = s[p];
+            }
+            return t;
+        };
+        return __assign.apply(this, arguments);
+    };
+
+    var fp = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Arabic = {
+        weekdays: {
+            shorthand: ["أحد", "اثنين", "ثلاثاء", "أربعاء", "خميس", "جمعة", "سبت"],
+            longhand: [
+                "الأحد",
+                "الاثنين",
+                "الثلاثاء",
+                "الأربعاء",
+                "الخميس",
+                "الجمعة",
+                "السبت",
+            ],
+        },
+        months: {
+            shorthand: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"],
+            longhand: [
+                "يناير",
+                "فبراير",
+                "مارس",
+                "أبريل",
+                "مايو",
+                "يونيو",
+                "يوليو",
+                "أغسطس",
+                "سبتمبر",
+                "أكتوبر",
+                "نوفمبر",
+                "ديسمبر",
+            ],
+        },
+        firstDayOfWeek: 6,
+        rangeSeparator: " إلى ",
+        weekAbbreviation: "Wk",
+        scrollTitle: "قم بالتمرير للزيادة",
+        toggleTitle: "اضغط للتبديل",
+        amPM: ["ص", "م"],
+        yearAriaLabel: "سنة",
+        monthAriaLabel: "شهر",
+        hourAriaLabel: "ساعة",
+        minuteAriaLabel: "دقيقة",
+        time_24hr: false,
+    };
+    fp.l10ns.ar = Arabic;
+    fp.l10ns;
+
+    var fp$1 = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Austria = {
+        weekdays: {
+            shorthand: ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"],
+            longhand: [
+                "Sonntag",
+                "Montag",
+                "Dienstag",
+                "Mittwoch",
+                "Donnerstag",
+                "Freitag",
+                "Samstag",
+            ],
+        },
+        months: {
+            shorthand: [
+                "Jän",
+                "Feb",
+                "Mär",
+                "Apr",
+                "Mai",
+                "Jun",
+                "Jul",
+                "Aug",
+                "Sep",
+                "Okt",
+                "Nov",
+                "Dez",
+            ],
+            longhand: [
+                "Jänner",
+                "Februar",
+                "März",
+                "April",
+                "Mai",
+                "Juni",
+                "Juli",
+                "August",
+                "September",
+                "Oktober",
+                "November",
+                "Dezember",
+            ],
+        },
+        firstDayOfWeek: 1,
+        weekAbbreviation: "KW",
+        rangeSeparator: " bis ",
+        scrollTitle: "Zum Ändern scrollen",
+        toggleTitle: "Zum Umschalten klicken",
+        time_24hr: true,
+    };
+    fp$1.l10ns.at = Austria;
+    fp$1.l10ns;
+
+    var fp$2 = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Azerbaijan = {
+        weekdays: {
+            shorthand: ["B.", "B.e.", "Ç.a.", "Ç.", "C.a.", "C.", "Ş."],
+            longhand: [
+                "Bazar",
+                "Bazar ertəsi",
+                "Çərşənbə axşamı",
+                "Çərşənbə",
+                "Cümə axşamı",
+                "Cümə",
+                "Şənbə",
+            ],
+        },
+        months: {
+            shorthand: [
+                "Yan",
+                "Fev",
+                "Mar",
+                "Apr",
+                "May",
+                "İyn",
+                "İyl",
+                "Avq",
+                "Sen",
+                "Okt",
+                "Noy",
+                "Dek",
+            ],
+            longhand: [
+                "Yanvar",
+                "Fevral",
+                "Mart",
+                "Aprel",
+                "May",
+                "İyun",
+                "İyul",
+                "Avqust",
+                "Sentyabr",
+                "Oktyabr",
+                "Noyabr",
+                "Dekabr",
+            ],
+        },
+        firstDayOfWeek: 1,
+        ordinal: function () {
+            return ".";
+        },
+        rangeSeparator: " - ",
+        weekAbbreviation: "Hf",
+        scrollTitle: "Artırmaq üçün sürüşdürün",
+        toggleTitle: "Aç / Bağla",
+        amPM: ["GƏ", "GS"],
+        time_24hr: true,
+    };
+    fp$2.l10ns.az = Azerbaijan;
+    fp$2.l10ns;
+
+    var fp$3 = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Belarusian = {
+        weekdays: {
+            shorthand: ["Нд", "Пн", "Аў", "Ср", "Чц", "Пт", "Сб"],
+            longhand: [
+                "Нядзеля",
+                "Панядзелак",
+                "Аўторак",
+                "Серада",
+                "Чацвер",
+                "Пятніца",
+                "Субота",
+            ],
+        },
+        months: {
+            shorthand: [
+                "Сту",
+                "Лют",
+                "Сак",
+                "Кра",
+                "Тра",
+                "Чэр",
+                "Ліп",
+                "Жні",
+                "Вер",
+                "Кас",
+                "Ліс",
+                "Сне",
+            ],
+            longhand: [
+                "Студзень",
+                "Люты",
+                "Сакавік",
+                "Красавік",
+                "Травень",
+                "Чэрвень",
+                "Ліпень",
+                "Жнівень",
+                "Верасень",
+                "Кастрычнік",
+                "Лістапад",
+                "Снежань",
+            ],
+        },
+        firstDayOfWeek: 1,
+        ordinal: function () {
+            return "";
+        },
+        rangeSeparator: " — ",
+        weekAbbreviation: "Тыд.",
+        scrollTitle: "Пракруціце для павелічэння",
+        toggleTitle: "Націсніце для пераключэння",
+        amPM: ["ДП", "ПП"],
+        yearAriaLabel: "Год",
+        time_24hr: true,
+    };
+    fp$3.l10ns.be = Belarusian;
+    fp$3.l10ns;
+
+    var fp$4 = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Bosnian = {
+        firstDayOfWeek: 1,
+        weekdays: {
+            shorthand: ["Ned", "Pon", "Uto", "Sri", "Čet", "Pet", "Sub"],
+            longhand: [
+                "Nedjelja",
+                "Ponedjeljak",
+                "Utorak",
+                "Srijeda",
+                "Četvrtak",
+                "Petak",
+                "Subota",
+            ],
+        },
+        months: {
+            shorthand: [
+                "Jan",
+                "Feb",
+                "Mar",
+                "Apr",
+                "Maj",
+                "Jun",
+                "Jul",
+                "Avg",
+                "Sep",
+                "Okt",
+                "Nov",
+                "Dec",
+            ],
+            longhand: [
+                "Januar",
+                "Februar",
+                "Mart",
+                "April",
+                "Maj",
+                "Juni",
+                "Juli",
+                "Avgust",
+                "Septembar",
+                "Oktobar",
+                "Novembar",
+                "Decembar",
+            ],
+        },
+        time_24hr: true,
+    };
+    fp$4.l10ns.bs = Bosnian;
+    fp$4.l10ns;
+
+    var fp$5 = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Bulgarian = {
+        weekdays: {
+            shorthand: ["Нд", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"],
+            longhand: [
+                "Неделя",
+                "Понеделник",
+                "Вторник",
+                "Сряда",
+                "Четвъртък",
+                "Петък",
+                "Събота",
+            ],
+        },
+        months: {
+            shorthand: [
+                "Яну",
+                "Фев",
+                "Март",
+                "Апр",
+                "Май",
+                "Юни",
+                "Юли",
+                "Авг",
+                "Сеп",
+                "Окт",
+                "Ное",
+                "Дек",
+            ],
+            longhand: [
+                "Януари",
+                "Февруари",
+                "Март",
+                "Април",
+                "Май",
+                "Юни",
+                "Юли",
+                "Август",
+                "Септември",
+                "Октомври",
+                "Ноември",
+                "Декември",
+            ],
+        },
+        time_24hr: true,
+        firstDayOfWeek: 1,
+    };
+    fp$5.l10ns.bg = Bulgarian;
+    fp$5.l10ns;
+
+    var fp$6 = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Bangla = {
+        weekdays: {
+            shorthand: ["রবি", "সোম", "মঙ্গল", "বুধ", "বৃহস্পতি", "শুক্র", "শনি"],
+            longhand: [
+                "রবিবার",
+                "সোমবার",
+                "মঙ্গলবার",
+                "বুধবার",
+                "বৃহস্পতিবার",
+                "শুক্রবার",
+                "শনিবার",
+            ],
+        },
+        months: {
+            shorthand: [
+                "জানু",
+                "ফেব্রু",
+                "মার্চ",
+                "এপ্রিল",
+                "মে",
+                "জুন",
+                "জুলাই",
+                "আগ",
+                "সেপ্টে",
+                "অক্টো",
+                "নভে",
+                "ডিসে",
+            ],
+            longhand: [
+                "জানুয়ারী",
+                "ফেব্রুয়ারী",
+                "মার্চ",
+                "এপ্রিল",
+                "মে",
+                "জুন",
+                "জুলাই",
+                "আগস্ট",
+                "সেপ্টেম্বর",
+                "অক্টোবর",
+                "নভেম্বর",
+                "ডিসেম্বর",
+            ],
+        },
+    };
+    fp$6.l10ns.bn = Bangla;
+    fp$6.l10ns;
+
+    var fp$7 = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Catalan = {
+        weekdays: {
+            shorthand: ["Dg", "Dl", "Dt", "Dc", "Dj", "Dv", "Ds"],
+            longhand: [
+                "Diumenge",
+                "Dilluns",
+                "Dimarts",
+                "Dimecres",
+                "Dijous",
+                "Divendres",
+                "Dissabte",
+            ],
+        },
+        months: {
+            shorthand: [
+                "Gen",
+                "Febr",
+                "Març",
+                "Abr",
+                "Maig",
+                "Juny",
+                "Jul",
+                "Ag",
+                "Set",
+                "Oct",
+                "Nov",
+                "Des",
+            ],
+            longhand: [
+                "Gener",
+                "Febrer",
+                "Març",
+                "Abril",
+                "Maig",
+                "Juny",
+                "Juliol",
+                "Agost",
+                "Setembre",
+                "Octubre",
+                "Novembre",
+                "Desembre",
+            ],
+        },
+        ordinal: function (nth) {
+            var s = nth % 100;
+            if (s > 3 && s < 21)
+                return "è";
+            switch (s % 10) {
+                case 1:
+                    return "r";
+                case 2:
+                    return "n";
+                case 3:
+                    return "r";
+                case 4:
+                    return "t";
+                default:
+                    return "è";
+            }
+        },
+        firstDayOfWeek: 1,
+        rangeSeparator: " a ",
+        time_24hr: true,
+    };
+    fp$7.l10ns.cat = fp$7.l10ns.ca = Catalan;
+    fp$7.l10ns;
+
+    var fp$8 = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Kurdish = {
+        weekdays: {
+            shorthand: [
+                "یەکشەممە",
+                "دووشەممە",
+                "سێشەممە",
+                "چوارشەممە",
+                "پێنجشەممە",
+                "هەینی",
+                "شەممە",
+            ],
+            longhand: [
+                "یەکشەممە",
+                "دووشەممە",
+                "سێشەممە",
+                "چوارشەممە",
+                "پێنجشەممە",
+                "هەینی",
+                "شەممە",
+            ],
+        },
+        months: {
+            shorthand: [
+                "ڕێبەندان",
+                "ڕەشەمە",
+                "نەورۆز",
+                "گوڵان",
+                "جۆزەردان",
+                "پووشپەڕ",
+                "گەلاوێژ",
+                "خەرمانان",
+                "ڕەزبەر",
+                "گەڵاڕێزان",
+                "سەرماوەز",
+                "بەفرانبار",
+            ],
+            longhand: [
+                "ڕێبەندان",
+                "ڕەشەمە",
+                "نەورۆز",
+                "گوڵان",
+                "جۆزەردان",
+                "پووشپەڕ",
+                "گەلاوێژ",
+                "خەرمانان",
+                "ڕەزبەر",
+                "گەڵاڕێزان",
+                "سەرماوەز",
+                "بەفرانبار",
+            ],
+        },
+        firstDayOfWeek: 6,
+        ordinal: function () {
+            return "";
+        },
+    };
+    fp$8.l10ns.ckb = Kurdish;
+    fp$8.l10ns;
+
+    var fp$9 = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Czech = {
+        weekdays: {
+            shorthand: ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"],
+            longhand: [
+                "Neděle",
+                "Pondělí",
+                "Úterý",
+                "Středa",
+                "Čtvrtek",
+                "Pátek",
+                "Sobota",
+            ],
+        },
+        months: {
+            shorthand: [
+                "Led",
+                "Ún",
+                "Bře",
+                "Dub",
+                "Kvě",
+                "Čer",
+                "Čvc",
+                "Srp",
+                "Zář",
+                "Říj",
+                "Lis",
+                "Pro",
+            ],
+            longhand: [
+                "Leden",
+                "Únor",
+                "Březen",
+                "Duben",
+                "Květen",
+                "Červen",
+                "Červenec",
+                "Srpen",
+                "Září",
+                "Říjen",
+                "Listopad",
+                "Prosinec",
+            ],
+        },
+        firstDayOfWeek: 1,
+        ordinal: function () {
+            return ".";
+        },
+        rangeSeparator: " do ",
+        weekAbbreviation: "Týd.",
+        scrollTitle: "Rolujte pro změnu",
+        toggleTitle: "Přepnout dopoledne/odpoledne",
+        amPM: ["dop.", "odp."],
+        yearAriaLabel: "Rok",
+        time_24hr: true,
+    };
+    fp$9.l10ns.cs = Czech;
+    fp$9.l10ns;
+
+    var fp$a = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Welsh = {
+        weekdays: {
+            shorthand: ["Sul", "Llun", "Maw", "Mer", "Iau", "Gwe", "Sad"],
+            longhand: [
+                "Dydd Sul",
+                "Dydd Llun",
+                "Dydd Mawrth",
+                "Dydd Mercher",
+                "Dydd Iau",
+                "Dydd Gwener",
+                "Dydd Sadwrn",
+            ],
+        },
+        months: {
+            shorthand: [
+                "Ion",
+                "Chwef",
+                "Maw",
+                "Ebr",
+                "Mai",
+                "Meh",
+                "Gorff",
+                "Awst",
+                "Medi",
+                "Hyd",
+                "Tach",
+                "Rhag",
+            ],
+            longhand: [
+                "Ionawr",
+                "Chwefror",
+                "Mawrth",
+                "Ebrill",
+                "Mai",
+                "Mehefin",
+                "Gorffennaf",
+                "Awst",
+                "Medi",
+                "Hydref",
+                "Tachwedd",
+                "Rhagfyr",
+            ],
+        },
+        firstDayOfWeek: 1,
+        ordinal: function (nth) {
+            if (nth === 1)
+                return "af";
+            if (nth === 2)
+                return "ail";
+            if (nth === 3 || nth === 4)
+                return "ydd";
+            if (nth === 5 || nth === 6)
+                return "ed";
+            if ((nth >= 7 && nth <= 10) ||
+                nth == 12 ||
+                nth == 15 ||
+                nth == 18 ||
+                nth == 20)
+                return "fed";
+            if (nth == 11 ||
+                nth == 13 ||
+                nth == 14 ||
+                nth == 16 ||
+                nth == 17 ||
+                nth == 19)
+                return "eg";
+            if (nth >= 21 && nth <= 39)
+                return "ain";
+            // Inconclusive.
+            return "";
+        },
+        time_24hr: true,
+    };
+    fp$a.l10ns.cy = Welsh;
+    fp$a.l10ns;
+
+    var fp$b = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Danish = {
+        weekdays: {
+            shorthand: ["søn", "man", "tir", "ons", "tors", "fre", "lør"],
+            longhand: [
+                "søndag",
+                "mandag",
+                "tirsdag",
+                "onsdag",
+                "torsdag",
+                "fredag",
+                "lørdag",
+            ],
+        },
+        months: {
+            shorthand: [
+                "jan",
+                "feb",
+                "mar",
+                "apr",
+                "maj",
+                "jun",
+                "jul",
+                "aug",
+                "sep",
+                "okt",
+                "nov",
+                "dec",
+            ],
+            longhand: [
+                "januar",
+                "februar",
+                "marts",
+                "april",
+                "maj",
+                "juni",
+                "juli",
+                "august",
+                "september",
+                "oktober",
+                "november",
+                "december",
+            ],
+        },
+        ordinal: function () {
+            return ".";
+        },
+        firstDayOfWeek: 1,
+        rangeSeparator: " til ",
+        weekAbbreviation: "uge",
+        time_24hr: true,
+    };
+    fp$b.l10ns.da = Danish;
+    fp$b.l10ns;
+
+    var fp$c = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var German = {
+        weekdays: {
+            shorthand: ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"],
+            longhand: [
+                "Sonntag",
+                "Montag",
+                "Dienstag",
+                "Mittwoch",
+                "Donnerstag",
+                "Freitag",
+                "Samstag",
+            ],
+        },
+        months: {
+            shorthand: [
+                "Jan",
+                "Feb",
+                "Mär",
+                "Apr",
+                "Mai",
+                "Jun",
+                "Jul",
+                "Aug",
+                "Sep",
+                "Okt",
+                "Nov",
+                "Dez",
+            ],
+            longhand: [
+                "Januar",
+                "Februar",
+                "März",
+                "April",
+                "Mai",
+                "Juni",
+                "Juli",
+                "August",
+                "September",
+                "Oktober",
+                "November",
+                "Dezember",
+            ],
+        },
+        firstDayOfWeek: 1,
+        weekAbbreviation: "KW",
+        rangeSeparator: " bis ",
+        scrollTitle: "Zum Ändern scrollen",
+        toggleTitle: "Zum Umschalten klicken",
+        time_24hr: true,
+    };
+    fp$c.l10ns.de = German;
+    fp$c.l10ns;
+
+    var english = {
+        weekdays: {
+            shorthand: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+            longhand: [
+                "Sunday",
+                "Monday",
+                "Tuesday",
+                "Wednesday",
+                "Thursday",
+                "Friday",
+                "Saturday",
+            ],
+        },
+        months: {
+            shorthand: [
+                "Jan",
+                "Feb",
+                "Mar",
+                "Apr",
+                "May",
+                "Jun",
+                "Jul",
+                "Aug",
+                "Sep",
+                "Oct",
+                "Nov",
+                "Dec",
+            ],
+            longhand: [
+                "January",
+                "February",
+                "March",
+                "April",
+                "May",
+                "June",
+                "July",
+                "August",
+                "September",
+                "October",
+                "November",
+                "December",
+            ],
+        },
+        daysInMonth: [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31],
+        firstDayOfWeek: 0,
+        ordinal: function (nth) {
+            var s = nth % 100;
+            if (s > 3 && s < 21)
+                return "th";
+            switch (s % 10) {
+                case 1:
+                    return "st";
+                case 2:
+                    return "nd";
+                case 3:
+                    return "rd";
+                default:
+                    return "th";
+            }
+        },
+        rangeSeparator: " to ",
+        weekAbbreviation: "Wk",
+        scrollTitle: "Scroll to increment",
+        toggleTitle: "Click to toggle",
+        amPM: ["AM", "PM"],
+        yearAriaLabel: "Year",
+        monthAriaLabel: "Month",
+        hourAriaLabel: "Hour",
+        minuteAriaLabel: "Minute",
+        time_24hr: false,
+    };
+
+    var fp$d = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Esperanto = {
+        firstDayOfWeek: 1,
+        rangeSeparator: " ĝis ",
+        weekAbbreviation: "Sem",
+        scrollTitle: "Rulumu por pligrandigi la valoron",
+        toggleTitle: "Klaku por ŝalti",
+        weekdays: {
+            shorthand: ["Dim", "Lun", "Mar", "Mer", "Ĵaŭ", "Ven", "Sab"],
+            longhand: [
+                "dimanĉo",
+                "lundo",
+                "mardo",
+                "merkredo",
+                "ĵaŭdo",
+                "vendredo",
+                "sabato",
+            ],
+        },
+        months: {
+            shorthand: [
+                "Jan",
+                "Feb",
+                "Mar",
+                "Apr",
+                "Maj",
+                "Jun",
+                "Jul",
+                "Aŭg",
+                "Sep",
+                "Okt",
+                "Nov",
+                "Dec",
+            ],
+            longhand: [
+                "januaro",
+                "februaro",
+                "marto",
+                "aprilo",
+                "majo",
+                "junio",
+                "julio",
+                "aŭgusto",
+                "septembro",
+                "oktobro",
+                "novembro",
+                "decembro",
+            ],
+        },
+        ordinal: function () {
+            return "-a";
+        },
+        time_24hr: true,
+    };
+    fp$d.l10ns.eo = Esperanto;
+    fp$d.l10ns;
+
+    var fp$e = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Spanish = {
+        weekdays: {
+            shorthand: ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"],
+            longhand: [
+                "Domingo",
+                "Lunes",
+                "Martes",
+                "Miércoles",
+                "Jueves",
+                "Viernes",
+                "Sábado",
+            ],
+        },
+        months: {
+            shorthand: [
+                "Ene",
+                "Feb",
+                "Mar",
+                "Abr",
+                "May",
+                "Jun",
+                "Jul",
+                "Ago",
+                "Sep",
+                "Oct",
+                "Nov",
+                "Dic",
+            ],
+            longhand: [
+                "Enero",
+                "Febrero",
+                "Marzo",
+                "Abril",
+                "Mayo",
+                "Junio",
+                "Julio",
+                "Agosto",
+                "Septiembre",
+                "Octubre",
+                "Noviembre",
+                "Diciembre",
+            ],
+        },
+        ordinal: function () {
+            return "º";
+        },
+        firstDayOfWeek: 1,
+        rangeSeparator: " a ",
+        time_24hr: true,
+    };
+    fp$e.l10ns.es = Spanish;
+    fp$e.l10ns;
+
+    var fp$f = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Estonian = {
+        weekdays: {
+            shorthand: ["P", "E", "T", "K", "N", "R", "L"],
+            longhand: [
+                "Pühapäev",
+                "Esmaspäev",
+                "Teisipäev",
+                "Kolmapäev",
+                "Neljapäev",
+                "Reede",
+                "Laupäev",
+            ],
+        },
+        months: {
+            shorthand: [
+                "Jaan",
+                "Veebr",
+                "Märts",
+                "Apr",
+                "Mai",
+                "Juuni",
+                "Juuli",
+                "Aug",
+                "Sept",
+                "Okt",
+                "Nov",
+                "Dets",
+            ],
+            longhand: [
+                "Jaanuar",
+                "Veebruar",
+                "Märts",
+                "Aprill",
+                "Mai",
+                "Juuni",
+                "Juuli",
+                "August",
+                "September",
+                "Oktoober",
+                "November",
+                "Detsember",
+            ],
+        },
+        firstDayOfWeek: 1,
+        ordinal: function () {
+            return ".";
+        },
+        weekAbbreviation: "Näd",
+        rangeSeparator: " kuni ",
+        scrollTitle: "Keri, et suurendada",
+        toggleTitle: "Klõpsa, et vahetada",
+        time_24hr: true,
+    };
+    fp$f.l10ns.et = Estonian;
+    fp$f.l10ns;
+
+    var fp$g = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Persian = {
+        weekdays: {
+            shorthand: ["یک", "دو", "سه", "چهار", "پنج", "جمعه", "شنبه"],
+            longhand: [
+                "یک‌شنبه",
+                "دوشنبه",
+                "سه‌شنبه",
+                "چهارشنبه",
+                "پنچ‌شنبه",
+                "جمعه",
+                "شنبه",
+            ],
+        },
+        months: {
+            shorthand: [
+                "ژانویه",
+                "فوریه",
+                "مارس",
+                "آوریل",
+                "مه",
+                "ژوئن",
+                "ژوئیه",
+                "اوت",
+                "سپتامبر",
+                "اکتبر",
+                "نوامبر",
+                "دسامبر",
+            ],
+            longhand: [
+                "ژانویه",
+                "فوریه",
+                "مارس",
+                "آوریل",
+                "مه",
+                "ژوئن",
+                "ژوئیه",
+                "اوت",
+                "سپتامبر",
+                "اکتبر",
+                "نوامبر",
+                "دسامبر",
+            ],
+        },
+        firstDayOfWeek: 6,
+        ordinal: function () {
+            return "";
+        },
+    };
+    fp$g.l10ns.fa = Persian;
+    fp$g.l10ns;
+
+    var fp$h = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Finnish = {
+        firstDayOfWeek: 1,
+        weekdays: {
+            shorthand: ["su", "ma", "ti", "ke", "to", "pe", "la"],
+            longhand: [
+                "sunnuntai",
+                "maanantai",
+                "tiistai",
+                "keskiviikko",
+                "torstai",
+                "perjantai",
+                "lauantai",
+            ],
+        },
+        months: {
+            shorthand: [
+                "tammi",
+                "helmi",
+                "maalis",
+                "huhti",
+                "touko",
+                "kesä",
+                "heinä",
+                "elo",
+                "syys",
+                "loka",
+                "marras",
+                "joulu",
+            ],
+            longhand: [
+                "tammikuu",
+                "helmikuu",
+                "maaliskuu",
+                "huhtikuu",
+                "toukokuu",
+                "kesäkuu",
+                "heinäkuu",
+                "elokuu",
+                "syyskuu",
+                "lokakuu",
+                "marraskuu",
+                "joulukuu",
+            ],
+        },
+        ordinal: function () {
+            return ".";
+        },
+        time_24hr: true,
+    };
+    fp$h.l10ns.fi = Finnish;
+    fp$h.l10ns;
+
+    var fp$i = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Faroese = {
+        weekdays: {
+            shorthand: ["Sun", "Mán", "Týs", "Mik", "Hós", "Frí", "Ley"],
+            longhand: [
+                "Sunnudagur",
+                "Mánadagur",
+                "Týsdagur",
+                "Mikudagur",
+                "Hósdagur",
+                "Fríggjadagur",
+                "Leygardagur",
+            ],
+        },
+        months: {
+            shorthand: [
+                "Jan",
+                "Feb",
+                "Mar",
+                "Apr",
+                "Mai",
+                "Jun",
+                "Jul",
+                "Aug",
+                "Sep",
+                "Okt",
+                "Nov",
+                "Des",
+            ],
+            longhand: [
+                "Januar",
+                "Februar",
+                "Mars",
+                "Apríl",
+                "Mai",
+                "Juni",
+                "Juli",
+                "August",
+                "Septembur",
+                "Oktobur",
+                "Novembur",
+                "Desembur",
+            ],
+        },
+        ordinal: function () {
+            return ".";
+        },
+        firstDayOfWeek: 1,
+        rangeSeparator: " til ",
+        weekAbbreviation: "vika",
+        scrollTitle: "Rulla fyri at broyta",
+        toggleTitle: "Trýst fyri at skifta",
+        yearAriaLabel: "Ár",
+        time_24hr: true,
+    };
+    fp$i.l10ns.fo = Faroese;
+    fp$i.l10ns;
+
+    var fp$j = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var French = {
+        firstDayOfWeek: 1,
+        weekdays: {
+            shorthand: ["dim", "lun", "mar", "mer", "jeu", "ven", "sam"],
+            longhand: [
+                "dimanche",
+                "lundi",
+                "mardi",
+                "mercredi",
+                "jeudi",
+                "vendredi",
+                "samedi",
+            ],
+        },
+        months: {
+            shorthand: [
+                "janv",
+                "févr",
+                "mars",
+                "avr",
+                "mai",
+                "juin",
+                "juil",
+                "août",
+                "sept",
+                "oct",
+                "nov",
+                "déc",
+            ],
+            longhand: [
+                "janvier",
+                "février",
+                "mars",
+                "avril",
+                "mai",
+                "juin",
+                "juillet",
+                "août",
+                "septembre",
+                "octobre",
+                "novembre",
+                "décembre",
+            ],
+        },
+        ordinal: function (nth) {
+            if (nth > 1)
+                return "";
+            return "er";
+        },
+        rangeSeparator: " au ",
+        weekAbbreviation: "Sem",
+        scrollTitle: "Défiler pour augmenter la valeur",
+        toggleTitle: "Cliquer pour basculer",
+        time_24hr: true,
+    };
+    fp$j.l10ns.fr = French;
+    fp$j.l10ns;
+
+    var fp$k = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Greek = {
+        weekdays: {
+            shorthand: ["Κυ", "Δε", "Τρ", "Τε", "Πέ", "Πα", "Σά"],
+            longhand: [
+                "Κυριακή",
+                "Δευτέρα",
+                "Τρίτη",
+                "Τετάρτη",
+                "Πέμπτη",
+                "Παρασκευή",
+                "Σάββατο",
+            ],
+        },
+        months: {
+            shorthand: [
+                "Ιαν",
+                "Φεβ",
+                "Μάρ",
+                "Απρ",
+                "Μάι",
+                "Ιούν",
+                "Ιούλ",
+                "Αύγ",
+                "Σεπ",
+                "Οκτ",
+                "Νοέ",
+                "Δεκ",
+            ],
+            longhand: [
+                "Ιανουάριος",
+                "Φεβρουάριος",
+                "Μάρτιος",
+                "Απρίλιος",
+                "Μάιος",
+                "Ιούνιος",
+                "Ιούλιος",
+                "Αύγουστος",
+                "Σεπτέμβριος",
+                "Οκτώβριος",
+                "Νοέμβριος",
+                "Δεκέμβριος",
+            ],
+        },
+        firstDayOfWeek: 1,
+        ordinal: function () {
+            return "";
+        },
+        weekAbbreviation: "Εβδ",
+        rangeSeparator: " έως ",
+        scrollTitle: "Μετακυλήστε για προσαύξηση",
+        toggleTitle: "Κάντε κλικ για αλλαγή",
+        amPM: ["ΠΜ", "ΜΜ"],
+        yearAriaLabel: "χρόνος",
+        monthAriaLabel: "μήνας",
+        hourAriaLabel: "ώρα",
+        minuteAriaLabel: "λεπτό",
+    };
+    fp$k.l10ns.gr = Greek;
+    fp$k.l10ns;
+
+    var fp$l = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Hebrew = {
+        weekdays: {
+            shorthand: ["א", "ב", "ג", "ד", "ה", "ו", "ש"],
+            longhand: ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"],
+        },
+        months: {
+            shorthand: [
+                "ינו׳",
+                "פבר׳",
+                "מרץ",
+                "אפר׳",
+                "מאי",
+                "יוני",
+                "יולי",
+                "אוג׳",
+                "ספט׳",
+                "אוק׳",
+                "נוב׳",
+                "דצמ׳",
+            ],
+            longhand: [
+                "ינואר",
+                "פברואר",
+                "מרץ",
+                "אפריל",
+                "מאי",
+                "יוני",
+                "יולי",
+                "אוגוסט",
+                "ספטמבר",
+                "אוקטובר",
+                "נובמבר",
+                "דצמבר",
+            ],
+        },
+        rangeSeparator: " אל ",
+        time_24hr: true,
+    };
+    fp$l.l10ns.he = Hebrew;
+    fp$l.l10ns;
+
+    var fp$m = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Hindi = {
+        weekdays: {
+            shorthand: ["रवि", "सोम", "मंगल", "बुध", "गुरु", "शुक्र", "शनि"],
+            longhand: [
+                "रविवार",
+                "सोमवार",
+                "मंगलवार",
+                "बुधवार",
+                "गुरुवार",
+                "शुक्रवार",
+                "शनिवार",
+            ],
+        },
+        months: {
+            shorthand: [
+                "जन",
+                "फर",
+                "मार्च",
+                "अप्रेल",
+                "मई",
+                "जून",
+                "जूलाई",
+                "अग",
+                "सित",
+                "अक्ट",
+                "नव",
+                "दि",
+            ],
+            longhand: [
+                "जनवरी ",
+                "फरवरी",
+                "मार्च",
+                "अप्रेल",
+                "मई",
+                "जून",
+                "जूलाई",
+                "अगस्त ",
+                "सितम्बर",
+                "अक्टूबर",
+                "नवम्बर",
+                "दिसम्बर",
+            ],
+        },
+    };
+    fp$m.l10ns.hi = Hindi;
+    fp$m.l10ns;
+
+    var fp$n = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Croatian = {
+        firstDayOfWeek: 1,
+        weekdays: {
+            shorthand: ["Ned", "Pon", "Uto", "Sri", "Čet", "Pet", "Sub"],
+            longhand: [
+                "Nedjelja",
+                "Ponedjeljak",
+                "Utorak",
+                "Srijeda",
+                "Četvrtak",
+                "Petak",
+                "Subota",
+            ],
+        },
+        months: {
+            shorthand: [
+                "Sij",
+                "Velj",
+                "Ožu",
+                "Tra",
+                "Svi",
+                "Lip",
+                "Srp",
+                "Kol",
+                "Ruj",
+                "Lis",
+                "Stu",
+                "Pro",
+            ],
+            longhand: [
+                "Siječanj",
+                "Veljača",
+                "Ožujak",
+                "Travanj",
+                "Svibanj",
+                "Lipanj",
+                "Srpanj",
+                "Kolovoz",
+                "Rujan",
+                "Listopad",
+                "Studeni",
+                "Prosinac",
+            ],
+        },
+        time_24hr: true,
+    };
+    fp$n.l10ns.hr = Croatian;
+    fp$n.l10ns;
+
+    var fp$o = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Hungarian = {
+        firstDayOfWeek: 1,
+        weekdays: {
+            shorthand: ["V", "H", "K", "Sz", "Cs", "P", "Szo"],
+            longhand: [
+                "Vasárnap",
+                "Hétfő",
+                "Kedd",
+                "Szerda",
+                "Csütörtök",
+                "Péntek",
+                "Szombat",
+            ],
+        },
+        months: {
+            shorthand: [
+                "Jan",
+                "Feb",
+                "Már",
+                "Ápr",
+                "Máj",
+                "Jún",
+                "Júl",
+                "Aug",
+                "Szep",
+                "Okt",
+                "Nov",
+                "Dec",
+            ],
+            longhand: [
+                "Január",
+                "Február",
+                "Március",
+                "Április",
+                "Május",
+                "Június",
+                "Július",
+                "Augusztus",
+                "Szeptember",
+                "Október",
+                "November",
+                "December",
+            ],
+        },
+        ordinal: function () {
+            return ".";
+        },
+        weekAbbreviation: "Hét",
+        scrollTitle: "Görgessen",
+        toggleTitle: "Kattintson a váltáshoz",
+        rangeSeparator: " - ",
+        time_24hr: true,
+    };
+    fp$o.l10ns.hu = Hungarian;
+    fp$o.l10ns;
+
+    var fp$p = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Armenian = {
+        weekdays: {
+            shorthand: ["Կիր", "Երկ", "Երք", "Չրք", "Հնգ", "Ուրբ", "Շբթ"],
+            longhand: [
+                "Կիրակի",
+                "Եկուշաբթի",
+                "Երեքշաբթի",
+                "Չորեքշաբթի",
+                "Հինգշաբթի",
+                "Ուրբաթ",
+                "Շաբաթ",
+            ],
+        },
+        months: {
+            shorthand: [
+                "Հնվ",
+                "Փտր",
+                "Մար",
+                "Ապր",
+                "Մայ",
+                "Հնս",
+                "Հլս",
+                "Օգս",
+                "Սեպ",
+                "Հոկ",
+                "Նմբ",
+                "Դեկ",
+            ],
+            longhand: [
+                "Հունվար",
+                "Փետրվար",
+                "Մարտ",
+                "Ապրիլ",
+                "Մայիս",
+                "Հունիս",
+                "Հուլիս",
+                "Օգոստոս",
+                "Սեպտեմբեր",
+                "Հոկտեմբեր",
+                "Նոյեմբեր",
+                "Դեկտեմբեր",
+            ],
+        },
+        firstDayOfWeek: 1,
+        ordinal: function () {
+            return "";
+        },
+        rangeSeparator: " — ",
+        weekAbbreviation: "ՇԲՏ",
+        scrollTitle: "Ոլորեք՝ մեծացնելու համար",
+        toggleTitle: "Սեղմեք՝ փոխելու համար",
+        amPM: ["ՄԿ", "ԿՀ"],
+        yearAriaLabel: "Տարի",
+        monthAriaLabel: "Ամիս",
+        hourAriaLabel: "Ժամ",
+        minuteAriaLabel: "Րոպե",
+        time_24hr: true,
+    };
+    fp$p.l10ns.hy = Armenian;
+    fp$p.l10ns;
+
+    var fp$q = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Indonesian = {
+        weekdays: {
+            shorthand: ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"],
+            longhand: ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"],
+        },
+        months: {
+            shorthand: [
+                "Jan",
+                "Feb",
+                "Mar",
+                "Apr",
+                "Mei",
+                "Jun",
+                "Jul",
+                "Agu",
+                "Sep",
+                "Okt",
+                "Nov",
+                "Des",
+            ],
+            longhand: [
+                "Januari",
+                "Februari",
+                "Maret",
+                "April",
+                "Mei",
+                "Juni",
+                "Juli",
+                "Agustus",
+                "September",
+                "Oktober",
+                "November",
+                "Desember",
+            ],
+        },
+        firstDayOfWeek: 1,
+        ordinal: function () {
+            return "";
+        },
+        time_24hr: true,
+        rangeSeparator: " - ",
+    };
+    fp$q.l10ns.id = Indonesian;
+    fp$q.l10ns;
+
+    var fp$r = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Icelandic = {
+        weekdays: {
+            shorthand: ["Sun", "Mán", "Þri", "Mið", "Fim", "Fös", "Lau"],
+            longhand: [
+                "Sunnudagur",
+                "Mánudagur",
+                "Þriðjudagur",
+                "Miðvikudagur",
+                "Fimmtudagur",
+                "Föstudagur",
+                "Laugardagur",
+            ],
+        },
+        months: {
+            shorthand: [
+                "Jan",
+                "Feb",
+                "Mar",
+                "Apr",
+                "Maí",
+                "Jún",
+                "Júl",
+                "Ágú",
+                "Sep",
+                "Okt",
+                "Nóv",
+                "Des",
+            ],
+            longhand: [
+                "Janúar",
+                "Febrúar",
+                "Mars",
+                "Apríl",
+                "Maí",
+                "Júní",
+                "Júlí",
+                "Ágúst",
+                "September",
+                "Október",
+                "Nóvember",
+                "Desember",
+            ],
+        },
+        ordinal: function () {
+            return ".";
+        },
+        firstDayOfWeek: 1,
+        rangeSeparator: " til ",
+        weekAbbreviation: "vika",
+        yearAriaLabel: "Ár",
+        time_24hr: true,
+    };
+    fp$r.l10ns.is = Icelandic;
+    fp$r.l10ns;
+
+    var fp$s = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Italian = {
+        weekdays: {
+            shorthand: ["Dom", "Lun", "Mar", "Mer", "Gio", "Ven", "Sab"],
+            longhand: [
+                "Domenica",
+                "Lunedì",
+                "Martedì",
+                "Mercoledì",
+                "Giovedì",
+                "Venerdì",
+                "Sabato",
+            ],
+        },
+        months: {
+            shorthand: [
+                "Gen",
+                "Feb",
+                "Mar",
+                "Apr",
+                "Mag",
+                "Giu",
+                "Lug",
+                "Ago",
+                "Set",
+                "Ott",
+                "Nov",
+                "Dic",
+            ],
+            longhand: [
+                "Gennaio",
+                "Febbraio",
+                "Marzo",
+                "Aprile",
+                "Maggio",
+                "Giugno",
+                "Luglio",
+                "Agosto",
+                "Settembre",
+                "Ottobre",
+                "Novembre",
+                "Dicembre",
+            ],
+        },
+        firstDayOfWeek: 1,
+        ordinal: function () { return "°"; },
+        rangeSeparator: " al ",
+        weekAbbreviation: "Se",
+        scrollTitle: "Scrolla per aumentare",
+        toggleTitle: "Clicca per cambiare",
+        time_24hr: true,
+    };
+    fp$s.l10ns.it = Italian;
+    fp$s.l10ns;
+
+    var fp$t = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Japanese = {
+        weekdays: {
+            shorthand: ["日", "月", "火", "水", "木", "金", "土"],
+            longhand: [
+                "日曜日",
+                "月曜日",
+                "火曜日",
+                "水曜日",
+                "木曜日",
+                "金曜日",
+                "土曜日",
+            ],
+        },
+        months: {
+            shorthand: [
+                "1月",
+                "2月",
+                "3月",
+                "4月",
+                "5月",
+                "6月",
+                "7月",
+                "8月",
+                "9月",
+                "10月",
+                "11月",
+                "12月",
+            ],
+            longhand: [
+                "1月",
+                "2月",
+                "3月",
+                "4月",
+                "5月",
+                "6月",
+                "7月",
+                "8月",
+                "9月",
+                "10月",
+                "11月",
+                "12月",
+            ],
+        },
+        time_24hr: true,
+        rangeSeparator: " から ",
+        monthAriaLabel: "月",
+        amPM: ["午前", "午後"],
+        yearAriaLabel: "年",
+        hourAriaLabel: "時間",
+        minuteAriaLabel: "分",
+    };
+    fp$t.l10ns.ja = Japanese;
+    fp$t.l10ns;
+
+    var fp$u = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Georgian = {
+        weekdays: {
+            shorthand: ["კვ", "ორ", "სა", "ოთ", "ხუ", "პა", "შა"],
+            longhand: [
+                "კვირა",
+                "ორშაბათი",
+                "სამშაბათი",
+                "ოთხშაბათი",
+                "ხუთშაბათი",
+                "პარასკევი",
+                "შაბათი",
+            ],
+        },
+        months: {
+            shorthand: [
+                "იან",
+                "თებ",
+                "მარ",
+                "აპრ",
+                "მაი",
+                "ივნ",
+                "ივლ",
+                "აგვ",
+                "სექ",
+                "ოქტ",
+                "ნოე",
+                "დეკ",
+            ],
+            longhand: [
+                "იანვარი",
+                "თებერვალი",
+                "მარტი",
+                "აპრილი",
+                "მაისი",
+                "ივნისი",
+                "ივლისი",
+                "აგვისტო",
+                "სექტემბერი",
+                "ოქტომბერი",
+                "ნოემბერი",
+                "დეკემბერი",
+            ],
+        },
+        firstDayOfWeek: 1,
+        ordinal: function () {
+            return "";
+        },
+        rangeSeparator: " — ",
+        weekAbbreviation: "კვ.",
+        scrollTitle: "დასქროლეთ გასადიდებლად",
+        toggleTitle: "დააკლიკეთ გადართვისთვის",
+        amPM: ["AM", "PM"],
+        yearAriaLabel: "წელი",
+        time_24hr: true,
+    };
+    fp$u.l10ns.ka = Georgian;
+    fp$u.l10ns;
+
+    var fp$v = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Korean = {
+        weekdays: {
+            shorthand: ["일", "월", "화", "수", "목", "금", "토"],
+            longhand: [
+                "일요일",
+                "월요일",
+                "화요일",
+                "수요일",
+                "목요일",
+                "금요일",
+                "토요일",
+            ],
+        },
+        months: {
+            shorthand: [
+                "1월",
+                "2월",
+                "3월",
+                "4월",
+                "5월",
+                "6월",
+                "7월",
+                "8월",
+                "9월",
+                "10월",
+                "11월",
+                "12월",
+            ],
+            longhand: [
+                "1월",
+                "2월",
+                "3월",
+                "4월",
+                "5월",
+                "6월",
+                "7월",
+                "8월",
+                "9월",
+                "10월",
+                "11월",
+                "12월",
+            ],
+        },
+        ordinal: function () {
+            return "일";
+        },
+        rangeSeparator: " ~ ",
+        amPM: ["오전", "오후"],
+    };
+    fp$v.l10ns.ko = Korean;
+    fp$v.l10ns;
+
+    var fp$w = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Khmer = {
+        weekdays: {
+            shorthand: ["អាទិត្យ", "ចន្ទ", "អង្គារ", "ពុធ", "ព្រហស.", "សុក្រ", "សៅរ៍"],
+            longhand: [
+                "អាទិត្យ",
+                "ចន្ទ",
+                "អង្គារ",
+                "ពុធ",
+                "ព្រហស្បតិ៍",
+                "សុក្រ",
+                "សៅរ៍",
+            ],
+        },
+        months: {
+            shorthand: [
+                "មករា",
+                "កុម្ភះ",
+                "មីនា",
+                "មេសា",
+                "ឧសភា",
+                "មិថុនា",
+                "កក្កដា",
+                "សីហា",
+                "កញ្ញា",
+                "តុលា",
+                "វិច្ឆិកា",
+                "ធ្នូ",
+            ],
+            longhand: [
+                "មករា",
+                "កុម្ភះ",
+                "មីនា",
+                "មេសា",
+                "ឧសភា",
+                "មិថុនា",
+                "កក្កដា",
+                "សីហា",
+                "កញ្ញា",
+                "តុលា",
+                "វិច្ឆិកា",
+                "ធ្នូ",
+            ],
+        },
+        ordinal: function () {
+            return "";
+        },
+        firstDayOfWeek: 1,
+        rangeSeparator: " ដល់ ",
+        weekAbbreviation: "សប្តាហ៍",
+        scrollTitle: "រំកិលដើម្បីបង្កើន",
+        toggleTitle: "ចុចដើម្បីផ្លាស់ប្ដូរ",
+        yearAriaLabel: "ឆ្នាំ",
+        time_24hr: true,
+    };
+    fp$w.l10ns.km = Khmer;
+    fp$w.l10ns;
+
+    var fp$x = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Kazakh = {
+        weekdays: {
+            shorthand: ["Жс", "Дс", "Сc", "Ср", "Бс", "Жм", "Сб"],
+            longhand: [
+                "Жексенбi",
+                "Дүйсенбi",
+                "Сейсенбi",
+                "Сәрсенбi",
+                "Бейсенбi",
+                "Жұма",
+                "Сенбi",
+            ],
+        },
+        months: {
+            shorthand: [
+                "Қаң",
+                "Ақп",
+                "Нау",
+                "Сәу",
+                "Мам",
+                "Мау",
+                "Шiл",
+                "Там",
+                "Қыр",
+                "Қаз",
+                "Қар",
+                "Жел",
+            ],
+            longhand: [
+                "Қаңтар",
+                "Ақпан",
+                "Наурыз",
+                "Сәуiр",
+                "Мамыр",
+                "Маусым",
+                "Шiлде",
+                "Тамыз",
+                "Қыркүйек",
+                "Қазан",
+                "Қараша",
+                "Желтоқсан",
+            ],
+        },
+        firstDayOfWeek: 1,
+        ordinal: function () {
+            return "";
+        },
+        rangeSeparator: " — ",
+        weekAbbreviation: "Апта",
+        scrollTitle: "Үлкейту үшін айналдырыңыз",
+        toggleTitle: "Ауыстыру үшін басыңыз",
+        amPM: ["ТД", "ТК"],
+        yearAriaLabel: "Жыл",
+    };
+    fp$x.l10ns.kz = Kazakh;
+    fp$x.l10ns;
+
+    var fp$y = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Lithuanian = {
+        weekdays: {
+            shorthand: ["S", "Pr", "A", "T", "K", "Pn", "Š"],
+            longhand: [
+                "Sekmadienis",
+                "Pirmadienis",
+                "Antradienis",
+                "Trečiadienis",
+                "Ketvirtadienis",
+                "Penktadienis",
+                "Šeštadienis",
+            ],
+        },
+        months: {
+            shorthand: [
+                "Sau",
+                "Vas",
+                "Kov",
+                "Bal",
+                "Geg",
+                "Bir",
+                "Lie",
+                "Rgp",
+                "Rgs",
+                "Spl",
+                "Lap",
+                "Grd",
+            ],
+            longhand: [
+                "Sausis",
+                "Vasaris",
+                "Kovas",
+                "Balandis",
+                "Gegužė",
+                "Birželis",
+                "Liepa",
+                "Rugpjūtis",
+                "Rugsėjis",
+                "Spalis",
+                "Lapkritis",
+                "Gruodis",
+            ],
+        },
+        firstDayOfWeek: 1,
+        ordinal: function () {
+            return "-a";
+        },
+        rangeSeparator: " iki ",
+        weekAbbreviation: "Sav",
+        scrollTitle: "Keisti laiką pelės rateliu",
+        toggleTitle: "Perjungti laiko formatą",
+        time_24hr: true,
+    };
+    fp$y.l10ns.lt = Lithuanian;
+    fp$y.l10ns;
+
+    var fp$z = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Latvian = {
+        firstDayOfWeek: 1,
+        weekdays: {
+            shorthand: ["Sv", "Pr", "Ot", "Tr", "Ce", "Pk", "Se"],
+            longhand: [
+                "Svētdiena",
+                "Pirmdiena",
+                "Otrdiena",
+                "Trešdiena",
+                "Ceturtdiena",
+                "Piektdiena",
+                "Sestdiena",
+            ],
+        },
+        months: {
+            shorthand: [
+                "Jan",
+                "Feb",
+                "Mar",
+                "Apr",
+                "Mai",
+                "Jūn",
+                "Jūl",
+                "Aug",
+                "Sep",
+                "Okt",
+                "Nov",
+                "Dec",
+            ],
+            longhand: [
+                "Janvāris",
+                "Februāris",
+                "Marts",
+                "Aprīlis",
+                "Maijs",
+                "Jūnijs",
+                "Jūlijs",
+                "Augusts",
+                "Septembris",
+                "Oktobris",
+                "Novembris",
+                "Decembris",
+            ],
+        },
+        rangeSeparator: " līdz ",
+        time_24hr: true,
+    };
+    fp$z.l10ns.lv = Latvian;
+    fp$z.l10ns;
+
+    var fp$A = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Macedonian = {
+        weekdays: {
+            shorthand: ["Не", "По", "Вт", "Ср", "Че", "Пе", "Са"],
+            longhand: [
+                "Недела",
+                "Понеделник",
+                "Вторник",
+                "Среда",
+                "Четврток",
+                "Петок",
+                "Сабота",
+            ],
+        },
+        months: {
+            shorthand: [
+                "Јан",
+                "Фев",
+                "Мар",
+                "Апр",
+                "Мај",
+                "Јун",
+                "Јул",
+                "Авг",
+                "Сеп",
+                "Окт",
+                "Ное",
+                "Дек",
+            ],
+            longhand: [
+                "Јануари",
+                "Февруари",
+                "Март",
+                "Април",
+                "Мај",
+                "Јуни",
+                "Јули",
+                "Август",
+                "Септември",
+                "Октомври",
+                "Ноември",
+                "Декември",
+            ],
+        },
+        firstDayOfWeek: 1,
+        weekAbbreviation: "Нед.",
+        rangeSeparator: " до ",
+        time_24hr: true,
+    };
+    fp$A.l10ns.mk = Macedonian;
+    fp$A.l10ns;
+
+    var fp$B = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Mongolian = {
+        firstDayOfWeek: 1,
+        weekdays: {
+            shorthand: ["Да", "Мя", "Лх", "Пү", "Ба", "Бя", "Ня"],
+            longhand: ["Даваа", "Мягмар", "Лхагва", "Пүрэв", "Баасан", "Бямба", "Ням"],
+        },
+        months: {
+            shorthand: [
+                "1-р сар",
+                "2-р сар",
+                "3-р сар",
+                "4-р сар",
+                "5-р сар",
+                "6-р сар",
+                "7-р сар",
+                "8-р сар",
+                "9-р сар",
+                "10-р сар",
+                "11-р сар",
+                "12-р сар",
+            ],
+            longhand: [
+                "Нэгдүгээр сар",
+                "Хоёрдугаар сар",
+                "Гуравдугаар сар",
+                "Дөрөвдүгээр сар",
+                "Тавдугаар сар",
+                "Зургаадугаар сар",
+                "Долдугаар сар",
+                "Наймдугаар сар",
+                "Есдүгээр сар",
+                "Аравдугаар сар",
+                "Арваннэгдүгээр сар",
+                "Арванхоёрдугаар сар",
+            ],
+        },
+        rangeSeparator: "-с ",
+        time_24hr: true,
+    };
+    fp$B.l10ns.mn = Mongolian;
+    fp$B.l10ns;
+
+    var fp$C = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Malaysian = {
+        weekdays: {
+            shorthand: ["Aha", "Isn", "Sel", "Rab", "Kha", "Jum", "Sab"],
+            longhand: ["Ahad", "Isnin", "Selasa", "Rabu", "Khamis", "Jumaat", "Sabtu"],
+        },
+        months: {
+            shorthand: [
+                "Jan",
+                "Feb",
+                "Mac",
+                "Apr",
+                "Mei",
+                "Jun",
+                "Jul",
+                "Ogo",
+                "Sep",
+                "Okt",
+                "Nov",
+                "Dis",
+            ],
+            longhand: [
+                "Januari",
+                "Februari",
+                "Mac",
+                "April",
+                "Mei",
+                "Jun",
+                "Julai",
+                "Ogos",
+                "September",
+                "Oktober",
+                "November",
+                "Disember",
+            ],
+        },
+        firstDayOfWeek: 1,
+        ordinal: function () {
+            return "";
+        },
+    };
+    fp$C.l10ns;
+
+    var fp$D = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Burmese = {
+        weekdays: {
+            shorthand: ["နွေ", "လာ", "ဂါ", "ဟူး", "ကြာ", "သော", "နေ"],
+            longhand: [
+                "တနင်္ဂနွေ",
+                "တနင်္လာ",
+                "အင်္ဂါ",
+                "ဗုဒ္ဓဟူး",
+                "ကြာသပတေး",
+                "သောကြာ",
+                "စနေ",
+            ],
+        },
+        months: {
+            shorthand: [
+                "ဇန်",
+                "ဖေ",
+                "မတ်",
+                "ပြီ",
+                "မေ",
+                "ဇွန်",
+                "လိုင်",
+                "သြ",
+                "စက်",
+                "အောက်",
+                "နို",
+                "ဒီ",
+            ],
+            longhand: [
+                "ဇန်နဝါရီ",
+                "ဖေဖော်ဝါရီ",
+                "မတ်",
+                "ဧပြီ",
+                "မေ",
+                "ဇွန်",
+                "ဇူလိုင်",
+                "သြဂုတ်",
+                "စက်တင်ဘာ",
+                "အောက်တိုဘာ",
+                "နိုဝင်ဘာ",
+                "ဒီဇင်ဘာ",
+            ],
+        },
+        firstDayOfWeek: 1,
+        ordinal: function () {
+            return "";
+        },
+        time_24hr: true,
+    };
+    fp$D.l10ns.my = Burmese;
+    fp$D.l10ns;
+
+    var fp$E = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Dutch = {
+        weekdays: {
+            shorthand: ["zo", "ma", "di", "wo", "do", "vr", "za"],
+            longhand: [
+                "zondag",
+                "maandag",
+                "dinsdag",
+                "woensdag",
+                "donderdag",
+                "vrijdag",
+                "zaterdag",
+            ],
+        },
+        months: {
+            shorthand: [
+                "jan",
+                "feb",
+                "mrt",
+                "apr",
+                "mei",
+                "jun",
+                "jul",
+                "aug",
+                "sept",
+                "okt",
+                "nov",
+                "dec",
+            ],
+            longhand: [
+                "januari",
+                "februari",
+                "maart",
+                "april",
+                "mei",
+                "juni",
+                "juli",
+                "augustus",
+                "september",
+                "oktober",
+                "november",
+                "december",
+            ],
+        },
+        firstDayOfWeek: 1,
+        weekAbbreviation: "wk",
+        rangeSeparator: " t/m ",
+        scrollTitle: "Scroll voor volgende / vorige",
+        toggleTitle: "Klik om te wisselen",
+        time_24hr: true,
+        ordinal: function (nth) {
+            if (nth === 1 || nth === 8 || nth >= 20)
+                return "ste";
+            return "de";
+        },
+    };
+    fp$E.l10ns.nl = Dutch;
+    fp$E.l10ns;
+
+    var fp$F = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var NorwegianNynorsk = {
+        weekdays: {
+            shorthand: ["Sø.", "Må.", "Ty.", "On.", "To.", "Fr.", "La."],
+            longhand: [
+                "Søndag",
+                "Måndag",
+                "Tysdag",
+                "Onsdag",
+                "Torsdag",
+                "Fredag",
+                "Laurdag",
+            ],
+        },
+        months: {
+            shorthand: [
+                "Jan",
+                "Feb",
+                "Mars",
+                "Apr",
+                "Mai",
+                "Juni",
+                "Juli",
+                "Aug",
+                "Sep",
+                "Okt",
+                "Nov",
+                "Des",
+            ],
+            longhand: [
+                "Januar",
+                "Februar",
+                "Mars",
+                "April",
+                "Mai",
+                "Juni",
+                "Juli",
+                "August",
+                "September",
+                "Oktober",
+                "November",
+                "Desember",
+            ],
+        },
+        firstDayOfWeek: 1,
+        rangeSeparator: " til ",
+        weekAbbreviation: "Veke",
+        scrollTitle: "Scroll for å endre",
+        toggleTitle: "Klikk for å veksle",
+        time_24hr: true,
+        ordinal: function () {
+            return ".";
+        },
+    };
+    fp$F.l10ns.nn = NorwegianNynorsk;
+    fp$F.l10ns;
+
+    var fp$G = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Norwegian = {
+        weekdays: {
+            shorthand: ["Søn", "Man", "Tir", "Ons", "Tor", "Fre", "Lør"],
+            longhand: [
+                "Søndag",
+                "Mandag",
+                "Tirsdag",
+                "Onsdag",
+                "Torsdag",
+                "Fredag",
+                "Lørdag",
+            ],
+        },
+        months: {
+            shorthand: [
+                "Jan",
+                "Feb",
+                "Mar",
+                "Apr",
+                "Mai",
+                "Jun",
+                "Jul",
+                "Aug",
+                "Sep",
+                "Okt",
+                "Nov",
+                "Des",
+            ],
+            longhand: [
+                "Januar",
+                "Februar",
+                "Mars",
+                "April",
+                "Mai",
+                "Juni",
+                "Juli",
+                "August",
+                "September",
+                "Oktober",
+                "November",
+                "Desember",
+            ],
+        },
+        firstDayOfWeek: 1,
+        rangeSeparator: " til ",
+        weekAbbreviation: "Uke",
+        scrollTitle: "Scroll for å endre",
+        toggleTitle: "Klikk for å veksle",
+        time_24hr: true,
+        ordinal: function () {
+            return ".";
+        },
+    };
+    fp$G.l10ns.no = Norwegian;
+    fp$G.l10ns;
+
+    var fp$H = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Punjabi = {
+        weekdays: {
+            shorthand: ["ਐਤ", "ਸੋਮ", "ਮੰਗਲ", "ਬੁੱਧ", "ਵੀਰ", "ਸ਼ੁੱਕਰ", "ਸ਼ਨਿੱਚਰ"],
+            longhand: [
+                "ਐਤਵਾਰ",
+                "ਸੋਮਵਾਰ",
+                "ਮੰਗਲਵਾਰ",
+                "ਬੁੱਧਵਾਰ",
+                "ਵੀਰਵਾਰ",
+                "ਸ਼ੁੱਕਰਵਾਰ",
+                "ਸ਼ਨਿੱਚਰਵਾਰ",
+            ],
+        },
+        months: {
+            shorthand: [
+                "ਜਨ",
+                "ਫ਼ਰ",
+                "ਮਾਰ",
+                "ਅਪ੍ਰੈ",
+                "ਮਈ",
+                "ਜੂਨ",
+                "ਜੁਲਾ",
+                "ਅਗ",
+                "ਸਤੰ",
+                "ਅਕ",
+                "ਨਵੰ",
+                "ਦਸੰ",
+            ],
+            longhand: [
+                "ਜਨਵਰੀ",
+                "ਫ਼ਰਵਰੀ",
+                "ਮਾਰਚ",
+                "ਅਪ੍ਰੈਲ",
+                "ਮਈ",
+                "ਜੂਨ",
+                "ਜੁਲਾਈ",
+                "ਅਗਸਤ",
+                "ਸਤੰਬਰ",
+                "ਅਕਤੂਬਰ",
+                "ਨਵੰਬਰ",
+                "ਦਸੰਬਰ",
+            ],
+        },
+        time_24hr: true,
+    };
+    fp$H.l10ns.pa = Punjabi;
+    fp$H.l10ns;
+
+    var fp$I = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Polish = {
+        weekdays: {
+            shorthand: ["Nd", "Pn", "Wt", "Śr", "Cz", "Pt", "So"],
+            longhand: [
+                "Niedziela",
+                "Poniedziałek",
+                "Wtorek",
+                "Środa",
+                "Czwartek",
+                "Piątek",
+                "Sobota",
+            ],
+        },
+        months: {
+            shorthand: [
+                "Sty",
+                "Lut",
+                "Mar",
+                "Kwi",
+                "Maj",
+                "Cze",
+                "Lip",
+                "Sie",
+                "Wrz",
+                "Paź",
+                "Lis",
+                "Gru",
+            ],
+            longhand: [
+                "Styczeń",
+                "Luty",
+                "Marzec",
+                "Kwiecień",
+                "Maj",
+                "Czerwiec",
+                "Lipiec",
+                "Sierpień",
+                "Wrzesień",
+                "Październik",
+                "Listopad",
+                "Grudzień",
+            ],
+        },
+        rangeSeparator: " do ",
+        weekAbbreviation: "tydz.",
+        scrollTitle: "Przewiń, aby zwiększyć",
+        toggleTitle: "Kliknij, aby przełączyć",
+        firstDayOfWeek: 1,
+        time_24hr: true,
+        ordinal: function () {
+            return ".";
+        },
+    };
+    fp$I.l10ns.pl = Polish;
+    fp$I.l10ns;
+
+    var fp$J = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Portuguese = {
+        weekdays: {
+            shorthand: ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"],
+            longhand: [
+                "Domingo",
+                "Segunda-feira",
+                "Terça-feira",
+                "Quarta-feira",
+                "Quinta-feira",
+                "Sexta-feira",
+                "Sábado",
+            ],
+        },
+        months: {
+            shorthand: [
+                "Jan",
+                "Fev",
+                "Mar",
+                "Abr",
+                "Mai",
+                "Jun",
+                "Jul",
+                "Ago",
+                "Set",
+                "Out",
+                "Nov",
+                "Dez",
+            ],
+            longhand: [
+                "Janeiro",
+                "Fevereiro",
+                "Março",
+                "Abril",
+                "Maio",
+                "Junho",
+                "Julho",
+                "Agosto",
+                "Setembro",
+                "Outubro",
+                "Novembro",
+                "Dezembro",
+            ],
+        },
+        rangeSeparator: " até ",
+        time_24hr: true,
+    };
+    fp$J.l10ns.pt = Portuguese;
+    fp$J.l10ns;
+
+    var fp$K = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Romanian = {
+        weekdays: {
+            shorthand: ["Dum", "Lun", "Mar", "Mie", "Joi", "Vin", "Sâm"],
+            longhand: [
+                "Duminică",
+                "Luni",
+                "Marți",
+                "Miercuri",
+                "Joi",
+                "Vineri",
+                "Sâmbătă",
+            ],
+        },
+        months: {
+            shorthand: [
+                "Ian",
+                "Feb",
+                "Mar",
+                "Apr",
+                "Mai",
+                "Iun",
+                "Iul",
+                "Aug",
+                "Sep",
+                "Oct",
+                "Noi",
+                "Dec",
+            ],
+            longhand: [
+                "Ianuarie",
+                "Februarie",
+                "Martie",
+                "Aprilie",
+                "Mai",
+                "Iunie",
+                "Iulie",
+                "August",
+                "Septembrie",
+                "Octombrie",
+                "Noiembrie",
+                "Decembrie",
+            ],
+        },
+        firstDayOfWeek: 1,
+        time_24hr: true,
+        ordinal: function () {
+            return "";
+        },
+    };
+    fp$K.l10ns.ro = Romanian;
+    fp$K.l10ns;
+
+    var fp$L = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Russian = {
+        weekdays: {
+            shorthand: ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"],
+            longhand: [
+                "Воскресенье",
+                "Понедельник",
+                "Вторник",
+                "Среда",
+                "Четверг",
+                "Пятница",
+                "Суббота",
+            ],
+        },
+        months: {
+            shorthand: [
+                "Янв",
+                "Фев",
+                "Март",
+                "Апр",
+                "Май",
+                "Июнь",
+                "Июль",
+                "Авг",
+                "Сен",
+                "Окт",
+                "Ноя",
+                "Дек",
+            ],
+            longhand: [
+                "Январь",
+                "Февраль",
+                "Март",
+                "Апрель",
+                "Май",
+                "Июнь",
+                "Июль",
+                "Август",
+                "Сентябрь",
+                "Октябрь",
+                "Ноябрь",
+                "Декабрь",
+            ],
+        },
+        firstDayOfWeek: 1,
+        ordinal: function () {
+            return "";
+        },
+        rangeSeparator: " — ",
+        weekAbbreviation: "Нед.",
+        scrollTitle: "Прокрутите для увеличения",
+        toggleTitle: "Нажмите для переключения",
+        amPM: ["ДП", "ПП"],
+        yearAriaLabel: "Год",
+        time_24hr: true,
+    };
+    fp$L.l10ns.ru = Russian;
+    fp$L.l10ns;
+
+    var fp$M = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Sinhala = {
+        weekdays: {
+            shorthand: ["ඉ", "ස", "අ", "බ", "බ්‍ර", "සි", "සෙ"],
+            longhand: [
+                "ඉරිදා",
+                "සඳුදා",
+                "අඟහරුවාදා",
+                "බදාදා",
+                "බ්‍රහස්පතින්දා",
+                "සිකුරාදා",
+                "සෙනසුරාදා",
+            ],
+        },
+        months: {
+            shorthand: [
+                "ජන",
+                "පෙබ",
+                "මාර්",
+                "අප්‍රේ",
+                "මැයි",
+                "ජුනි",
+                "ජූලි",
+                "අගෝ",
+                "සැප්",
+                "ඔක්",
+                "නොවැ",
+                "දෙසැ",
+            ],
+            longhand: [
+                "ජනවාරි",
+                "පෙබරවාරි",
+                "මාර්තු",
+                "අප්‍රේල්",
+                "මැයි",
+                "ජුනි",
+                "ජූලි",
+                "අගෝස්තු",
+                "සැප්තැම්බර්",
+                "ඔක්තෝබර්",
+                "නොවැම්බර්",
+                "දෙසැම්බර්",
+            ],
+        },
+        time_24hr: true,
+    };
+    fp$M.l10ns.si = Sinhala;
+    fp$M.l10ns;
+
+    var fp$N = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Slovak = {
+        weekdays: {
+            shorthand: ["Ned", "Pon", "Ut", "Str", "Štv", "Pia", "Sob"],
+            longhand: [
+                "Nedeľa",
+                "Pondelok",
+                "Utorok",
+                "Streda",
+                "Štvrtok",
+                "Piatok",
+                "Sobota",
+            ],
+        },
+        months: {
+            shorthand: [
+                "Jan",
+                "Feb",
+                "Mar",
+                "Apr",
+                "Máj",
+                "Jún",
+                "Júl",
+                "Aug",
+                "Sep",
+                "Okt",
+                "Nov",
+                "Dec",
+            ],
+            longhand: [
+                "Január",
+                "Február",
+                "Marec",
+                "Apríl",
+                "Máj",
+                "Jún",
+                "Júl",
+                "August",
+                "September",
+                "Október",
+                "November",
+                "December",
+            ],
+        },
+        firstDayOfWeek: 1,
+        rangeSeparator: " do ",
+        time_24hr: true,
+        ordinal: function () {
+            return ".";
+        },
+    };
+    fp$N.l10ns.sk = Slovak;
+    fp$N.l10ns;
+
+    var fp$O = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Slovenian = {
+        weekdays: {
+            shorthand: ["Ned", "Pon", "Tor", "Sre", "Čet", "Pet", "Sob"],
+            longhand: [
+                "Nedelja",
+                "Ponedeljek",
+                "Torek",
+                "Sreda",
+                "Četrtek",
+                "Petek",
+                "Sobota",
+            ],
+        },
+        months: {
+            shorthand: [
+                "Jan",
+                "Feb",
+                "Mar",
+                "Apr",
+                "Maj",
+                "Jun",
+                "Jul",
+                "Avg",
+                "Sep",
+                "Okt",
+                "Nov",
+                "Dec",
+            ],
+            longhand: [
+                "Januar",
+                "Februar",
+                "Marec",
+                "April",
+                "Maj",
+                "Junij",
+                "Julij",
+                "Avgust",
+                "September",
+                "Oktober",
+                "November",
+                "December",
+            ],
+        },
+        firstDayOfWeek: 1,
+        rangeSeparator: " do ",
+        time_24hr: true,
+        ordinal: function () {
+            return ".";
+        },
+    };
+    fp$O.l10ns.sl = Slovenian;
+    fp$O.l10ns;
+
+    var fp$P = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Albanian = {
+        weekdays: {
+            shorthand: ["Di", "Hë", "Ma", "Më", "En", "Pr", "Sh"],
+            longhand: [
+                "E Diel",
+                "E Hënë",
+                "E Martë",
+                "E Mërkurë",
+                "E Enjte",
+                "E Premte",
+                "E Shtunë",
+            ],
+        },
+        months: {
+            shorthand: [
+                "Jan",
+                "Shk",
+                "Mar",
+                "Pri",
+                "Maj",
+                "Qer",
+                "Kor",
+                "Gus",
+                "Sht",
+                "Tet",
+                "Nën",
+                "Dhj",
+            ],
+            longhand: [
+                "Janar",
+                "Shkurt",
+                "Mars",
+                "Prill",
+                "Maj",
+                "Qershor",
+                "Korrik",
+                "Gusht",
+                "Shtator",
+                "Tetor",
+                "Nëntor",
+                "Dhjetor",
+            ],
+        },
+        firstDayOfWeek: 1,
+        rangeSeparator: " deri ",
+        weekAbbreviation: "Java",
+        yearAriaLabel: "Viti",
+        monthAriaLabel: "Muaji",
+        hourAriaLabel: "Ora",
+        minuteAriaLabel: "Minuta",
+        time_24hr: true,
+    };
+    fp$P.l10ns.sq = Albanian;
+    fp$P.l10ns;
+
+    var fp$Q = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Serbian = {
+        weekdays: {
+            shorthand: ["Ned", "Pon", "Uto", "Sre", "Čet", "Pet", "Sub"],
+            longhand: [
+                "Nedelja",
+                "Ponedeljak",
+                "Utorak",
+                "Sreda",
+                "Četvrtak",
+                "Petak",
+                "Subota",
+            ],
+        },
+        months: {
+            shorthand: [
+                "Jan",
+                "Feb",
+                "Mar",
+                "Apr",
+                "Maj",
+                "Jun",
+                "Jul",
+                "Avg",
+                "Sep",
+                "Okt",
+                "Nov",
+                "Dec",
+            ],
+            longhand: [
+                "Januar",
+                "Februar",
+                "Mart",
+                "April",
+                "Maj",
+                "Jun",
+                "Jul",
+                "Avgust",
+                "Septembar",
+                "Oktobar",
+                "Novembar",
+                "Decembar",
+            ],
+        },
+        firstDayOfWeek: 1,
+        weekAbbreviation: "Ned.",
+        rangeSeparator: " do ",
+        time_24hr: true,
+    };
+    fp$Q.l10ns.sr = Serbian;
+    fp$Q.l10ns;
+
+    var fp$R = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Swedish = {
+        firstDayOfWeek: 1,
+        weekAbbreviation: "v",
+        weekdays: {
+            shorthand: ["sön", "mån", "tis", "ons", "tor", "fre", "lör"],
+            longhand: [
+                "söndag",
+                "måndag",
+                "tisdag",
+                "onsdag",
+                "torsdag",
+                "fredag",
+                "lördag",
+            ],
+        },
+        months: {
+            shorthand: [
+                "jan",
+                "feb",
+                "mar",
+                "apr",
+                "maj",
+                "jun",
+                "jul",
+                "aug",
+                "sep",
+                "okt",
+                "nov",
+                "dec",
+            ],
+            longhand: [
+                "januari",
+                "februari",
+                "mars",
+                "april",
+                "maj",
+                "juni",
+                "juli",
+                "augusti",
+                "september",
+                "oktober",
+                "november",
+                "december",
+            ],
+        },
+        rangeSeparator: " till ",
+        time_24hr: true,
+        ordinal: function () {
+            return ".";
+        },
+    };
+    fp$R.l10ns.sv = Swedish;
+    fp$R.l10ns;
+
+    var fp$S = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Thai = {
+        weekdays: {
+            shorthand: ["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"],
+            longhand: [
+                "อาทิตย์",
+                "จันทร์",
+                "อังคาร",
+                "พุธ",
+                "พฤหัสบดี",
+                "ศุกร์",
+                "เสาร์",
+            ],
+        },
+        months: {
+            shorthand: [
+                "ม.ค.",
+                "ก.พ.",
+                "มี.ค.",
+                "เม.ย.",
+                "พ.ค.",
+                "มิ.ย.",
+                "ก.ค.",
+                "ส.ค.",
+                "ก.ย.",
+                "ต.ค.",
+                "พ.ย.",
+                "ธ.ค.",
+            ],
+            longhand: [
+                "มกราคม",
+                "กุมภาพันธ์",
+                "มีนาคม",
+                "เมษายน",
+                "พฤษภาคม",
+                "มิถุนายน",
+                "กรกฎาคม",
+                "สิงหาคม",
+                "กันยายน",
+                "ตุลาคม",
+                "พฤศจิกายน",
+                "ธันวาคม",
+            ],
+        },
+        firstDayOfWeek: 1,
+        rangeSeparator: " ถึง ",
+        scrollTitle: "เลื่อนเพื่อเพิ่มหรือลด",
+        toggleTitle: "คลิกเพื่อเปลี่ยน",
+        time_24hr: true,
+        ordinal: function () {
+            return "";
+        },
+    };
+    fp$S.l10ns.th = Thai;
+    fp$S.l10ns;
+
+    var fp$T = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Turkish = {
+        weekdays: {
+            shorthand: ["Paz", "Pzt", "Sal", "Çar", "Per", "Cum", "Cmt"],
+            longhand: [
+                "Pazar",
+                "Pazartesi",
+                "Salı",
+                "Çarşamba",
+                "Perşembe",
+                "Cuma",
+                "Cumartesi",
+            ],
+        },
+        months: {
+            shorthand: [
+                "Oca",
+                "Şub",
+                "Mar",
+                "Nis",
+                "May",
+                "Haz",
+                "Tem",
+                "Ağu",
+                "Eyl",
+                "Eki",
+                "Kas",
+                "Ara",
+            ],
+            longhand: [
+                "Ocak",
+                "Şubat",
+                "Mart",
+                "Nisan",
+                "Mayıs",
+                "Haziran",
+                "Temmuz",
+                "Ağustos",
+                "Eylül",
+                "Ekim",
+                "Kasım",
+                "Aralık",
+            ],
+        },
+        firstDayOfWeek: 1,
+        ordinal: function () {
+            return ".";
+        },
+        rangeSeparator: " - ",
+        weekAbbreviation: "Hf",
+        scrollTitle: "Artırmak için kaydırın",
+        toggleTitle: "Aç/Kapa",
+        amPM: ["ÖÖ", "ÖS"],
+        time_24hr: true,
+    };
+    fp$T.l10ns.tr = Turkish;
+    fp$T.l10ns;
+
+    var fp$U = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Ukrainian = {
+        firstDayOfWeek: 1,
+        weekdays: {
+            shorthand: ["Нд", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"],
+            longhand: [
+                "Неділя",
+                "Понеділок",
+                "Вівторок",
+                "Середа",
+                "Четвер",
+                "П'ятниця",
+                "Субота",
+            ],
+        },
+        months: {
+            shorthand: [
+                "Січ",
+                "Лют",
+                "Бер",
+                "Кві",
+                "Тра",
+                "Чер",
+                "Лип",
+                "Сер",
+                "Вер",
+                "Жов",
+                "Лис",
+                "Гру",
+            ],
+            longhand: [
+                "Січень",
+                "Лютий",
+                "Березень",
+                "Квітень",
+                "Травень",
+                "Червень",
+                "Липень",
+                "Серпень",
+                "Вересень",
+                "Жовтень",
+                "Листопад",
+                "Грудень",
+            ],
+        },
+        time_24hr: true,
+    };
+    fp$U.l10ns.uk = Ukrainian;
+    fp$U.l10ns;
+
+    var fp$V = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Uzbek = {
+        weekdays: {
+            shorthand: ["Якш", "Душ", "Сеш", "Чор", "Пай", "Жум", "Шан"],
+            longhand: [
+                "Якшанба",
+                "Душанба",
+                "Сешанба",
+                "Чоршанба",
+                "Пайшанба",
+                "Жума",
+                "Шанба",
+            ],
+        },
+        months: {
+            shorthand: [
+                "Янв",
+                "Фев",
+                "Мар",
+                "Апр",
+                "Май",
+                "Июн",
+                "Июл",
+                "Авг",
+                "Сен",
+                "Окт",
+                "Ноя",
+                "Дек",
+            ],
+            longhand: [
+                "Январ",
+                "Феврал",
+                "Март",
+                "Апрел",
+                "Май",
+                "Июн",
+                "Июл",
+                "Август",
+                "Сентябр",
+                "Октябр",
+                "Ноябр",
+                "Декабр",
+            ],
+        },
+        firstDayOfWeek: 1,
+        ordinal: function () {
+            return "";
+        },
+        rangeSeparator: " — ",
+        weekAbbreviation: "Ҳафта",
+        scrollTitle: "Катталаштириш учун айлантиринг",
+        toggleTitle: "Ўтиш учун босинг",
+        amPM: ["AM", "PM"],
+        yearAriaLabel: "Йил",
+        time_24hr: true,
+    };
+    fp$V.l10ns.uz = Uzbek;
+    fp$V.l10ns;
+
+    var fp$W = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var UzbekLatin = {
+        weekdays: {
+            shorthand: ["Ya", "Du", "Se", "Cho", "Pa", "Ju", "Sha"],
+            longhand: [
+                "Yakshanba",
+                "Dushanba",
+                "Seshanba",
+                "Chorshanba",
+                "Payshanba",
+                "Juma",
+                "Shanba",
+            ],
+        },
+        months: {
+            shorthand: [
+                "Yan",
+                "Fev",
+                "Mar",
+                "Apr",
+                "May",
+                "Iyun",
+                "Iyul",
+                "Avg",
+                "Sen",
+                "Okt",
+                "Noy",
+                "Dek",
+            ],
+            longhand: [
+                "Yanvar",
+                "Fevral",
+                "Mart",
+                "Aprel",
+                "May",
+                "Iyun",
+                "Iyul",
+                "Avgust",
+                "Sentabr",
+                "Oktabr",
+                "Noyabr",
+                "Dekabr",
+            ],
+        },
+        firstDayOfWeek: 1,
+        ordinal: function () {
+            return "";
+        },
+        rangeSeparator: " — ",
+        weekAbbreviation: "Hafta",
+        scrollTitle: "Kattalashtirish uchun aylantiring",
+        toggleTitle: "O‘tish uchun bosing",
+        amPM: ["AM", "PM"],
+        yearAriaLabel: "Yil",
+        time_24hr: true,
+    };
+    fp$W.l10ns["uz_latn"] = UzbekLatin;
+    fp$W.l10ns;
+
+    var fp$X = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Vietnamese = {
+        weekdays: {
+            shorthand: ["CN", "T2", "T3", "T4", "T5", "T6", "T7"],
+            longhand: [
+                "Chủ nhật",
+                "Thứ hai",
+                "Thứ ba",
+                "Thứ tư",
+                "Thứ năm",
+                "Thứ sáu",
+                "Thứ bảy",
+            ],
+        },
+        months: {
+            shorthand: [
+                "Th1",
+                "Th2",
+                "Th3",
+                "Th4",
+                "Th5",
+                "Th6",
+                "Th7",
+                "Th8",
+                "Th9",
+                "Th10",
+                "Th11",
+                "Th12",
+            ],
+            longhand: [
+                "Tháng một",
+                "Tháng hai",
+                "Tháng ba",
+                "Tháng tư",
+                "Tháng năm",
+                "Tháng sáu",
+                "Tháng bảy",
+                "Tháng tám",
+                "Tháng chín",
+                "Tháng mười",
+                "Tháng mười một",
+                "Tháng mười hai",
+            ],
+        },
+        firstDayOfWeek: 1,
+        rangeSeparator: " đến ",
+    };
+    fp$X.l10ns.vn = Vietnamese;
+    fp$X.l10ns;
+
+    var fp$Y = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var Mandarin = {
+        weekdays: {
+            shorthand: ["周日", "周一", "周二", "周三", "周四", "周五", "周六"],
+            longhand: [
+                "星期日",
+                "星期一",
+                "星期二",
+                "星期三",
+                "星期四",
+                "星期五",
+                "星期六",
+            ],
+        },
+        months: {
+            shorthand: [
+                "一月",
+                "二月",
+                "三月",
+                "四月",
+                "五月",
+                "六月",
+                "七月",
+                "八月",
+                "九月",
+                "十月",
+                "十一月",
+                "十二月",
+            ],
+            longhand: [
+                "一月",
+                "二月",
+                "三月",
+                "四月",
+                "五月",
+                "六月",
+                "七月",
+                "八月",
+                "九月",
+                "十月",
+                "十一月",
+                "十二月",
+            ],
+        },
+        rangeSeparator: " 至 ",
+        weekAbbreviation: "周",
+        scrollTitle: "滚动切换",
+        toggleTitle: "点击切换 12/24 小时时制",
+    };
+    fp$Y.l10ns.zh = Mandarin;
+    fp$Y.l10ns;
+
+    var fp$Z = typeof window !== "undefined" && window.flatpickr !== undefined
+        ? window.flatpickr
+        : {
+            l10ns: {},
+        };
+    var MandarinTraditional = {
+        weekdays: {
+            shorthand: ["週日", "週一", "週二", "週三", "週四", "週五", "週六"],
+            longhand: [
+                "星期日",
+                "星期一",
+                "星期二",
+                "星期三",
+                "星期四",
+                "星期五",
+                "星期六",
+            ],
+        },
+        months: {
+            shorthand: [
+                "一月",
+                "二月",
+                "三月",
+                "四月",
+                "五月",
+                "六月",
+                "七月",
+                "八月",
+                "九月",
+                "十月",
+                "十一月",
+                "十二月",
+            ],
+            longhand: [
+                "一月",
+                "二月",
+                "三月",
+                "四月",
+                "五月",
+                "六月",
+                "七月",
+                "八月",
+                "九月",
+                "十月",
+                "十一月",
+                "十二月",
+            ],
+        },
+        rangeSeparator: " 至 ",
+        weekAbbreviation: "週",
+        scrollTitle: "滾動切換",
+        toggleTitle: "點擊切換 12/24 小時時制",
+    };
+    fp$Z.l10ns.zh_tw = MandarinTraditional;
+    fp$Z.l10ns;
+
+    var l10n = {
+        ar: Arabic,
+        at: Austria,
+        az: Azerbaijan,
+        be: Belarusian,
+        bg: Bulgarian,
+        bn: Bangla,
+        bs: Bosnian,
+        ca: Catalan,
+        ckb: Kurdish,
+        cat: Catalan,
+        cs: Czech,
+        cy: Welsh,
+        da: Danish,
+        de: German,
+        default: __assign({}, english),
+        en: english,
+        eo: Esperanto,
+        es: Spanish,
+        et: Estonian,
+        fa: Persian,
+        fi: Finnish,
+        fo: Faroese,
+        fr: French,
+        gr: Greek,
+        he: Hebrew,
+        hi: Hindi,
+        hr: Croatian,
+        hu: Hungarian,
+        hy: Armenian,
+        id: Indonesian,
+        is: Icelandic,
+        it: Italian,
+        ja: Japanese,
+        ka: Georgian,
+        ko: Korean,
+        km: Khmer,
+        kz: Kazakh,
+        lt: Lithuanian,
+        lv: Latvian,
+        mk: Macedonian,
+        mn: Mongolian,
+        ms: Malaysian,
+        my: Burmese,
+        nl: Dutch,
+        nn: NorwegianNynorsk,
+        no: Norwegian,
+        pa: Punjabi,
+        pl: Polish,
+        pt: Portuguese,
+        ro: Romanian,
+        ru: Russian,
+        si: Sinhala,
+        sk: Slovak,
+        sl: Slovenian,
+        sq: Albanian,
+        sr: Serbian,
+        sv: Swedish,
+        th: Thai,
+        tr: Turkish,
+        uk: Ukrainian,
+        vn: Vietnamese,
+        zh: Mandarin,
+        zh_tw: MandarinTraditional,
+        uz: Uzbek,
+        uz_latn: UzbekLatin,
+    };
+
+    exports.default = l10n;
+
+    Object.defineProperty(exports, '__esModule', { value: true });
+
+})));
+
+
+/***/ },
+
+/***/ "./node_modules/tingle.js/dist/tingle.min.js"
 /*!***************************************************!*\
   !*** ./node_modules/tingle.js/dist/tingle.min.js ***!
   \***************************************************/
-/***/ (function(module, exports, __webpack_require__) {
+(module, exports, __webpack_require__) {
 
 var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_RESULT__;!function(t,o){ true?!(__WEBPACK_AMD_DEFINE_FACTORY__ = (o),
 		__WEBPACK_AMD_DEFINE_RESULT__ = (typeof __WEBPACK_AMD_DEFINE_FACTORY__ === 'function' ?
@@ -2936,7 +7353,7 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_RESULT__;!function(t,o)
 		__WEBPACK_AMD_DEFINE_FACTORY__),
 		__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__)):0}(this,function(){var o=!1;function t(t){this.opts=function(){for(var t=1;t<arguments.length;t++)for(var o in arguments[t])arguments[t].hasOwnProperty(o)&&(arguments[0][o]=arguments[t][o]);return arguments[0]}({},{onClose:null,onOpen:null,beforeOpen:null,beforeClose:null,stickyFooter:!1,footer:!1,cssClass:[],closeLabel:"Close",closeMethods:["overlay","button","escape"]},t),this.init()}function e(){this.modalBoxFooter&&(this.modalBoxFooter.style.width=this.modalBox.clientWidth+"px",this.modalBoxFooter.style.left=this.modalBox.offsetLeft+"px")}return t.prototype.init=function(){if(!this.modal)return function(){this.modal=document.createElement("div"),this.modal.classList.add("tingle-modal"),0!==this.opts.closeMethods.length&&-1!==this.opts.closeMethods.indexOf("overlay")||this.modal.classList.add("tingle-modal--noOverlayClose");this.modal.style.display="none",this.opts.cssClass.forEach(function(t){"string"==typeof t&&this.modal.classList.add(t)},this),-1!==this.opts.closeMethods.indexOf("button")&&(this.modalCloseBtn=document.createElement("button"),this.modalCloseBtn.type="button",this.modalCloseBtn.classList.add("tingle-modal__close"),this.modalCloseBtnIcon=document.createElement("span"),this.modalCloseBtnIcon.classList.add("tingle-modal__closeIcon"),this.modalCloseBtnIcon.innerHTML='<svg viewBox="0 0 10 10" xmlns="http://www.w3.org/2000/svg"><path d="M.3 9.7c.2.2.4.3.7.3.3 0 .5-.1.7-.3L5 6.4l3.3 3.3c.2.2.5.3.7.3.2 0 .5-.1.7-.3.4-.4.4-1 0-1.4L6.4 5l3.3-3.3c.4-.4.4-1 0-1.4-.4-.4-1-.4-1.4 0L5 3.6 1.7.3C1.3-.1.7-.1.3.3c-.4.4-.4 1 0 1.4L3.6 5 .3 8.3c-.4.4-.4 1 0 1.4z" fill="#000" fill-rule="nonzero"/></svg>',this.modalCloseBtnLabel=document.createElement("span"),this.modalCloseBtnLabel.classList.add("tingle-modal__closeLabel"),this.modalCloseBtnLabel.innerHTML=this.opts.closeLabel,this.modalCloseBtn.appendChild(this.modalCloseBtnIcon),this.modalCloseBtn.appendChild(this.modalCloseBtnLabel));this.modalBox=document.createElement("div"),this.modalBox.classList.add("tingle-modal-box"),this.modalBoxContent=document.createElement("div"),this.modalBoxContent.classList.add("tingle-modal-box__content"),this.modalBox.appendChild(this.modalBoxContent),-1!==this.opts.closeMethods.indexOf("button")&&this.modal.appendChild(this.modalCloseBtn);this.modal.appendChild(this.modalBox)}.call(this),function(){this._events={clickCloseBtn:this.close.bind(this),clickOverlay:function(t){var o=this.modal.offsetWidth-this.modal.clientWidth,e=t.clientX>=this.modal.offsetWidth-15,s=this.modal.scrollHeight!==this.modal.offsetHeight;if("MacIntel"===navigator.platform&&0==o&&e&&s)return;-1!==this.opts.closeMethods.indexOf("overlay")&&!function(t,o){for(;(t=t.parentElement)&&!t.classList.contains(o););return t}(t.target,"tingle-modal")&&t.clientX<this.modal.clientWidth&&this.close()}.bind(this),resize:this.checkOverflow.bind(this),keyboardNav:function(t){-1!==this.opts.closeMethods.indexOf("escape")&&27===t.which&&this.isOpen()&&this.close()}.bind(this)},-1!==this.opts.closeMethods.indexOf("button")&&this.modalCloseBtn.addEventListener("click",this._events.clickCloseBtn);this.modal.addEventListener("mousedown",this._events.clickOverlay),window.addEventListener("resize",this._events.resize),document.addEventListener("keydown",this._events.keyboardNav)}.call(this),document.body.appendChild(this.modal,document.body.firstChild),this.opts.footer&&this.addFooter(),this},t.prototype._busy=function(t){o=t},t.prototype._isBusy=function(){return o},t.prototype.destroy=function(){null!==this.modal&&(this.isOpen()&&this.close(!0),function(){-1!==this.opts.closeMethods.indexOf("button")&&this.modalCloseBtn.removeEventListener("click",this._events.clickCloseBtn);this.modal.removeEventListener("mousedown",this._events.clickOverlay),window.removeEventListener("resize",this._events.resize),document.removeEventListener("keydown",this._events.keyboardNav)}.call(this),this.modal.parentNode.removeChild(this.modal),this.modal=null)},t.prototype.isOpen=function(){return!!this.modal.classList.contains("tingle-modal--visible")},t.prototype.open=function(){if(!this._isBusy()){this._busy(!0);var t=this;return"function"==typeof t.opts.beforeOpen&&t.opts.beforeOpen(),this.modal.style.removeProperty?this.modal.style.removeProperty("display"):this.modal.style.removeAttribute("display"),document.getSelection().removeAllRanges(),this._scrollPosition=window.pageYOffset,document.body.classList.add("tingle-enabled"),document.body.style.top=-this._scrollPosition+"px",this.setStickyFooter(this.opts.stickyFooter),this.modal.classList.add("tingle-modal--visible"),"function"==typeof t.opts.onOpen&&t.opts.onOpen.call(t),t._busy(!1),this.checkOverflow(),this}},t.prototype.close=function(t){if(!this._isBusy()){if(this._busy(!0),!1,"function"==typeof this.opts.beforeClose)if(!this.opts.beforeClose.call(this))return void this._busy(!1);document.body.classList.remove("tingle-enabled"),document.body.style.top=null,window.scrollTo({top:this._scrollPosition,behavior:"instant"}),this.modal.classList.remove("tingle-modal--visible");var o=this;o.modal.style.display="none","function"==typeof o.opts.onClose&&o.opts.onClose.call(this),o._busy(!1)}},t.prototype.setContent=function(t){return"string"==typeof t?this.modalBoxContent.innerHTML=t:(this.modalBoxContent.innerHTML="",this.modalBoxContent.appendChild(t)),this.isOpen()&&this.checkOverflow(),this},t.prototype.getContent=function(){return this.modalBoxContent},t.prototype.addFooter=function(){return function(){this.modalBoxFooter=document.createElement("div"),this.modalBoxFooter.classList.add("tingle-modal-box__footer"),this.modalBox.appendChild(this.modalBoxFooter)}.call(this),this},t.prototype.setFooterContent=function(t){return this.modalBoxFooter.innerHTML=t,this},t.prototype.getFooterContent=function(){return this.modalBoxFooter},t.prototype.setStickyFooter=function(t){return this.isOverflow()||(t=!1),t?this.modalBox.contains(this.modalBoxFooter)&&(this.modalBox.removeChild(this.modalBoxFooter),this.modal.appendChild(this.modalBoxFooter),this.modalBoxFooter.classList.add("tingle-modal-box__footer--sticky"),e.call(this),this.modalBoxContent.style["padding-bottom"]=this.modalBoxFooter.clientHeight+20+"px"):this.modalBoxFooter&&(this.modalBox.contains(this.modalBoxFooter)||(this.modal.removeChild(this.modalBoxFooter),this.modalBox.appendChild(this.modalBoxFooter),this.modalBoxFooter.style.width="auto",this.modalBoxFooter.style.left="",this.modalBoxContent.style["padding-bottom"]="",this.modalBoxFooter.classList.remove("tingle-modal-box__footer--sticky"))),this},t.prototype.addFooterBtn=function(t,o,e){var s=document.createElement("button");return s.innerHTML=t,s.addEventListener("click",e),"string"==typeof o&&o.length&&o.split(" ").forEach(function(t){s.classList.add(t)}),this.modalBoxFooter.appendChild(s),s},t.prototype.resize=function(){console.warn("Resize is deprecated and will be removed in version 1.0")},t.prototype.isOverflow=function(){return window.innerHeight<=this.modalBox.clientHeight},t.prototype.checkOverflow=function(){this.modal.classList.contains("tingle-modal--visible")&&(this.isOverflow()?this.modal.classList.add("tingle-modal--overflow"):this.modal.classList.remove("tingle-modal--overflow"),!this.isOverflow()&&this.opts.stickyFooter?this.setStickyFooter(!1):this.isOverflow()&&this.opts.stickyFooter&&(e.call(this),this.setStickyFooter(!0)))},{modal:t}});
 
-/***/ })
+/***/ }
 
 /******/ 	});
 /************************************************************************/
@@ -2958,6 +7375,12 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_RESULT__;!function(t,o)
 /******/ 		};
 /******/ 	
 /******/ 		// Execute the module function
+/******/ 		if (!(moduleId in __webpack_modules__)) {
+/******/ 			delete __webpack_module_cache__[moduleId];
+/******/ 			var e = new Error("Cannot find module '" + moduleId + "'");
+/******/ 			e.code = 'MODULE_NOT_FOUND';
+/******/ 			throw e;
+/******/ 		}
 /******/ 		__webpack_modules__[moduleId].call(module.exports, module, module.exports, __webpack_require__);
 /******/ 	
 /******/ 		// Return the exports of the module
@@ -3015,21 +7438,43 @@ var __webpack_exports__ = {};
   \************************************************/
 __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var flatpickr__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! flatpickr */ "./node_modules/flatpickr/dist/esm/index.js");
-/* harmony import */ var tingle_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! tingle.js */ "./node_modules/tingle.js/dist/tingle.min.js");
-/* harmony import */ var tingle_js__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(tingle_js__WEBPACK_IMPORTED_MODULE_1__);
-/* harmony import */ var _utils_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils.js */ "./assets/js/utils.js");
+/* harmony import */ var flatpickr_dist_l10n_index_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! flatpickr/dist/l10n/index.js */ "./node_modules/flatpickr/dist/l10n/index.js");
+/* harmony import */ var flatpickr_dist_l10n_index_js__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(flatpickr_dist_l10n_index_js__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var tingle_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! tingle.js */ "./node_modules/tingle.js/dist/tingle.min.js");
+/* harmony import */ var tingle_js__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(tingle_js__WEBPACK_IMPORTED_MODULE_2__);
+/* harmony import */ var _utils_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../utils.js */ "./assets/js/utils.js");
+/* harmony import */ var _flatpickr_locale_utils_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./flatpickr-locale-utils.js */ "./assets/js/frontend/flatpickr-locale-utils.js");
 
 
-// import 'flatpickr/dist/flatpickr.min.css';
+
+
 
 let modalCheckDates;
 const className = {
   'elBtnsCalendarPricing': '.wphb-room-calendar-pricing-buttons'
 };
 let elHotelBookingRoom, elTmplDateAvailable, elAddToCart, elForm, roomCalendarPricing, roomPricing, elBtnsCalendarPricing, roomDateRangeSelector, minEndDatePlan;
-const toYmdLocal = date => {
-  const z = n => ('0' + n).slice(-2);
-  return date.getFullYear() + '/' + z(date.getMonth() + 1) + '/' + z(date.getDate());
+const INTERNAL_DATE_FORMAT = hotel_settings.internal_date_format || 'Y/m/d';
+const FRONTEND_DATE_FORMAT = hotel_settings.flatpickr_date_format || INTERNAL_DATE_FORMAT;
+// Build one locale config for all pickers: browser locale + admin first day of week.
+const FLATPICKR_LOCALE = (0,_flatpickr_locale_utils_js__WEBPACK_IMPORTED_MODULE_4__.createFlatpickrLocaleConfig)((flatpickr_dist_l10n_index_js__WEBPACK_IMPORTED_MODULE_1___default()), hotel_settings.first_day_of_week);
+(0,_flatpickr_locale_utils_js__WEBPACK_IMPORTED_MODULE_4__.applyFlatpickrLocaleConfig)(flatpickr__WEBPACK_IMPORTED_MODULE_0__["default"], FLATPICKR_LOCALE);
+const {
+  parseBookingDateValue,
+  parseFlatpickrDate,
+  formatBookingDateForUi,
+  formatBookingDateForSubmit
+} = (0,_flatpickr_locale_utils_js__WEBPACK_IMPORTED_MODULE_4__.createBookingDateHelpers)(flatpickr__WEBPACK_IMPORTED_MODULE_0__["default"], FRONTEND_DATE_FORMAT, INTERNAL_DATE_FORMAT);
+
+// Validate and normalize before submit to avoid ambiguous string date parsing.
+const validateAndNormalizeBookingDateRange = form => {
+  return (0,_flatpickr_locale_utils_js__WEBPACK_IMPORTED_MODULE_4__.validateBookingDateRange)(form, {
+    parseBookingDateValue,
+    formatBookingDateForSubmit,
+    emptyCheckInMessage: window?.hotel_booking_i18n?.empty_check_in_date || 'Please select check in date.',
+    emptyCheckOutMessage: window?.hotel_booking_i18n?.empty_check_out_date || 'Please select check out date.',
+    invalidRangeMessage: window?.hotel_booking_i18n?.check_out_date_must_be_greater || 'Check out date must be greater than the check in.'
+  });
 };
 const wphbRoomInitDatePicker = () => {
   elHotelBookingRoom = document.querySelector('#hotel_booking_room_hidden');
@@ -3042,39 +7487,24 @@ const wphbRoomInitDatePicker = () => {
   const elDateCheckIn = elForm.querySelector('input[name="check_in_date"]');
   const elDateCheckOut = elForm.querySelector('input[name="check_out_date"]');
   const elDateRange = elForm.querySelector('input[name="select-date-range"]');
+  (0,_flatpickr_locale_utils_js__WEBPACK_IMPORTED_MODULE_4__.syncBookingDateFieldsForUi)({
+    checkInField: elDateCheckIn,
+    checkOutField: elDateCheckOut,
+    rangeField: elDateRange,
+    rangeSeparator: _flatpickr_locale_utils_js__WEBPACK_IMPORTED_MODULE_4__.FLATPICKR_RANGE_SEPARATOR
+  }, {
+    parseBookingDateValue,
+    formatBookingDateForUi
+  });
   let datePickerCheckIn;
   let datePickerCheckOut;
   let dateMinCheckInCanBook;
   let dateMinCheckOutCanBook;
-  const datesBlock = [];
+  const datesBlock = (0,_flatpickr_locale_utils_js__WEBPACK_IMPORTED_MODULE_4__.mapBookingTimestampsToDates)(hotel_settings.block_dates);
   const dateNow = new Date();
   const dateTomorrow = new Date(dateNow.setDate(dateNow.getDate() + 1 + hotel_settings.min_booking_date));
-  const minBookingDateNumber = hotel_settings.min_booking_date > 0 ? parseInt(hotel_settings.min_booking_date) : 1;
-  if (hotel_settings.block_dates) {
-    const dateTimeStampsBlock = hotel_settings.block_dates;
-    if (dateTimeStampsBlock) {
-      dateTimeStampsBlock.forEach(timeStamp => {
-        const date = new Date(timeStamp * 1000);
-        const dateBlock = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-        datesBlock.push(dateBlock);
-      });
-    }
-
-    // Get date min check in can book
-    /*let dateMinCheckInCanBook;
-    		const getDateMinCheckInCanBook = ( dateCompare, datesBlock ) => {
-    	datesBlock.some( ( date ) => {
-    		console.log()
-    		if ( date.getTime() > dateCompare.getTime() ) {
-    			dateMinCheckInCanBook = dateCompare;
-    			return true;
-    		}
-    				dateCompare = new Date( dateCompare.setDate( dateCompare.getDate() + 1 ) );
-    		//dateDisableNear = getDateMinCheckInCanBook( dateCompare, datesBlock );
-    	} );
-    };
-    		getDateMinCheckInCanBook( dateNow, datesBlock );*/
-  } else {
+  const minBookingDateNumber = (0,_flatpickr_locale_utils_js__WEBPACK_IMPORTED_MODULE_4__.getMinBookingDays)(hotel_settings.min_booking_date);
+  if (datesBlock.length === 0) {
     dateMinCheckInCanBook = dateNow;
     dateMinCheckOutCanBook = dateTomorrow;
   }
@@ -3095,48 +7525,34 @@ const wphbRoomInitDatePicker = () => {
     return dateCalendar <= dateSelected;
   };
   if (elDateRange) {
-    let positionEle = parseInt(elDateRange.getAttribute('data-hidden')) === 1 ? elDateCheckIn : null,
-      roomId = elForm.querySelector('input[name="room-id"]').value;
-    let minEndDate;
-    roomDateRangeSelector = (0,flatpickr__WEBPACK_IMPORTED_MODULE_0__["default"])(elDateRange, {
-      mode: "range",
-      dateFormat: 'Y/m/d',
+    // Single range picker mode: one input controls both check-in and check-out.
+    let positionEle = parseInt(elDateRange.getAttribute('data-hidden')) === 1 ? elDateCheckIn : null;
+    let minEndDate = null;
+    roomDateRangeSelector = (0,flatpickr__WEBPACK_IMPORTED_MODULE_0__["default"])(elDateRange, (0,_flatpickr_locale_utils_js__WEBPACK_IMPORTED_MODULE_4__.createFlatpickrConfig)({
+      dateFormat: FRONTEND_DATE_FORMAT,
+      parseDate: parseFlatpickrDate,
+      locale: FLATPICKR_LOCALE
+    }, {
+      mode: 'range',
       minDate: 'today',
       disable: datesBlock,
       showMonths: 2,
       positionElement: positionEle,
-      locale: {
-        firstDayOfWeek: 1
-      },
       defaultDate: [elDateCheckIn.value, elDateCheckOut.value],
-      onDayCreate: function (dObj, dStr, fpInstance, dayElem) {
-        if (!minEndDate) return;
-        const date = dayElem.dateObj;
-        // disable dates which smaller than minEndDate
-        if (date < minEndDate) {
-          dayElem.classList.add('flatpickr-disabled');
-          dayElem.setAttribute('aria-disabled', 'true');
-        }
-      },
+      onDayCreate: (0,_flatpickr_locale_utils_js__WEBPACK_IMPORTED_MODULE_4__.createMinEndDateDayCreateHandler)(() => minEndDate),
       onChange: function (selectedDates, dateStr, instance) {
         if (selectedDates.length === 2) {
-          elDateCheckIn.value = toYmdLocal(selectedDates[0]);
-          elDateCheckOut.value = toYmdLocal(selectedDates[1]);
-          instance._input.value = toYmdLocal(selectedDates[0]) + ' - ' + toYmdLocal(selectedDates[1]);
-          // reset minEndDate
-          minEndDate = new Date();
+          elDateCheckIn.value = formatBookingDateForUi(selectedDates[0]);
+          elDateCheckOut.value = formatBookingDateForUi(selectedDates[1]);
+          instance._input.value = (0,_flatpickr_locale_utils_js__WEBPACK_IMPORTED_MODULE_4__.formatDateRangeValue)(formatBookingDateForUi(selectedDates[0]), formatBookingDateForUi(selectedDates[1]), _flatpickr_locale_utils_js__WEBPACK_IMPORTED_MODULE_4__.FLATPICKR_RANGE_SEPARATOR);
+          minEndDate = null;
           instance.redraw();
-          // Calculate booking price after selecting dates
           calculateBookingPrice(elForm);
         } else if (selectedDates.length === 1) {
-          const start = selectedDates[0];
-          minEndDate = new Date(start);
-          minEndDate.setDate(minEndDate.getDate() + hotel_settings.min_booking_date);
-          // redraw to trigger onDayCreate
+          minEndDate = (0,_flatpickr_locale_utils_js__WEBPACK_IMPORTED_MODULE_4__.getMinEndDateFromStartDate)(selectedDates[0], minBookingDateNumber);
           instance.redraw();
-        } else if (selectedDates.length === 0) {
-          // reset minEndDate
-          minEndDate = new Date();
+        } else {
+          minEndDate = null;
           instance.redraw();
         }
       },
@@ -3144,11 +7560,11 @@ const wphbRoomInitDatePicker = () => {
         let month = instance.currentMonth + 1,
           year = instance.currentYear;
         if (undefined !== roomCalendarPricing) {
-          roomCalendarPricing.jumpToDate(year + "/" + month + "/01");
+          roomCalendarPricing.jumpToDate(new Date(year, month - 1, 1));
           roomCalendarPricing.config.onMonthChange.forEach(fn => fn(roomCalendarPricing.selectedDates, roomCalendarPricing.input.value, roomCalendarPricing));
         }
       }
-    });
+    }));
     elForm.addEventListener('click', e => {
       let target = e.target;
       if (target === elDateCheckIn || target === elDateCheckOut) {
@@ -3162,7 +7578,6 @@ const wphbRoomInitDatePicker = () => {
           return;
         }
         if (!elDateCheckIn.value || !elDateCheckOut.value) {
-          // elForm.querySelector( '.hb-total-price-value' ).innerHTML = utils.wphbRenderPrice( 0 );
           return;
         }
         calculateBookingPrice(elForm);
@@ -3170,16 +7585,15 @@ const wphbRoomInitDatePicker = () => {
     });
   } else {
     let defaultCheckInDate = elDateCheckIn.value ? elDateCheckIn.value : dateMinCheckInCanBook;
-    // Check in date
-    const optionCheckIn = {
-      dateFormat: 'Y/m/d',
+    // Two-input mode: check-in picker drives minDate/disabled logic of check-out picker.
+    const optionCheckIn = (0,_flatpickr_locale_utils_js__WEBPACK_IMPORTED_MODULE_4__.createFlatpickrConfig)({
+      dateFormat: FRONTEND_DATE_FORMAT,
+      parseDate: parseFlatpickrDate,
+      locale: FLATPICKR_LOCALE
+    }, {
       minDate: 'today',
       disable: datesBlock,
       defaultDate: defaultCheckInDate,
-      disableMobile: true,
-      locale: {
-        firstDayOfWeek: 1
-      },
       onChange(selectedDates, dateStr, instance) {
         if (datePickerCheckOut) {
           // calculate next day available
@@ -3193,22 +7607,19 @@ const wphbRoomInitDatePicker = () => {
           }]);
         }
       }
-    };
+    });
     datePickerCheckIn = (0,flatpickr__WEBPACK_IMPORTED_MODULE_0__["default"])(elDateCheckIn, optionCheckIn);
-    // console.log( elDateCheckIn.value );
     let defaultCheckOutDate = elDateCheckOut.value ? elDateCheckOut.value : dateMinCheckOutCanBook;
-    // Check out date
-    const optionCheckout = {
-      dateFormat: 'Y/m/d',
+    // Check-out picker uses the same strict parser and locale as check-in picker.
+    const optionCheckout = (0,_flatpickr_locale_utils_js__WEBPACK_IMPORTED_MODULE_4__.createFlatpickrConfig)({
+      dateFormat: FRONTEND_DATE_FORMAT,
+      parseDate: parseFlatpickrDate,
+      locale: FLATPICKR_LOCALE
+    }, {
       minDate: hotel_settings.min_booking_date > 0 ? new Date().fp_incr(hotel_settings.min_booking_date) : 'today',
       disable: datesBlock,
-      defaultDate: defaultCheckOutDate,
-      disableMobile: true,
-      locale: {
-        firstDayOfWeek: 1
-      },
-      onChange(selectedDates, dateStr, instance) {}
-    };
+      defaultDate: defaultCheckOutDate
+    });
     datePickerCheckOut = (0,flatpickr__WEBPACK_IMPORTED_MODULE_0__["default"])(elDateCheckOut, optionCheckout);
   }
 };
@@ -3222,42 +7633,25 @@ const calendarPricing = () => {
   if (elRoomCalendarPricing) {
     elBtnsCalendarPricing = document.querySelector(className.elBtnsCalendarPricing);
     const roomId = parseInt(elRoomCalendarPricing.dataset.roomId) ?? 0;
-    let blockDates = [];
-    if (hotel_settings.block_dates) {
-      const dateTimeStampsBlock = hotel_settings.block_dates;
-      if (dateTimeStampsBlock) {
-        dateTimeStampsBlock.forEach(timeStamp => {
-          const date = new Date(timeStamp * 1000);
-          const dateBlock = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-          blockDates.push(dateBlock);
-        });
-      }
-    }
+    let blockDates = (0,_flatpickr_locale_utils_js__WEBPACK_IMPORTED_MODULE_4__.mapBookingTimestampsToDates)(hotel_settings.block_dates);
     let calendarDefaultDate = [];
     if (elForm && elForm.querySelector('input[name="check_in_date"]').value && elForm.querySelector('input[name="check_out_date"]').value) {
       calendarDefaultDate = [elForm.querySelector('input[name="check_in_date"]').value, elForm.querySelector('input[name="check_out_date"]').value];
     }
     let showMonths = window.innerWidth >= 992 ? 2 : 1;
-    roomCalendarPricing = (0,flatpickr__WEBPACK_IMPORTED_MODULE_0__["default"])(elRoomCalendarPricing, {
-      dateFormat: 'Y/m/d',
+    // Inline pricing calendar is also a flatpickr range picker sharing locale/format config.
+    roomCalendarPricing = (0,flatpickr__WEBPACK_IMPORTED_MODULE_0__["default"])(elRoomCalendarPricing, (0,_flatpickr_locale_utils_js__WEBPACK_IMPORTED_MODULE_4__.createFlatpickrConfig)({
+      dateFormat: FRONTEND_DATE_FORMAT,
+      parseDate: parseFlatpickrDate,
+      locale: FLATPICKR_LOCALE
+    }, {
       mode: 'range',
       minDate: 'today',
       inline: true,
       disable: blockDates,
       defaultDate: calendarDefaultDate,
       showMonths: showMonths,
-      locale: {
-        firstDayOfWeek: 1
-      },
-      onDayCreate: function (dObj, dStr, fpInstance, dayElem) {
-        if (!minEndDatePlan) return;
-        const date = dayElem.dateObj;
-        // disable dates which smaller than minEndDatePlan
-        if (date < minEndDatePlan) {
-          dayElem.classList.add('flatpickr-disabled');
-          dayElem.setAttribute('aria-disabled', 'true');
-        }
-      },
+      onDayCreate: (0,_flatpickr_locale_utils_js__WEBPACK_IMPORTED_MODULE_4__.createMinEndDateDayCreateHandler)(() => minEndDatePlan),
       onReady: function (selectedDates, dateStr, instance) {
         let month = instance.currentMonth + 1,
           year = instance.currentYear;
@@ -3269,10 +7663,10 @@ const calendarPricing = () => {
       },
       onChange: function (selectedDates, dateStr, instance) {
         if (selectedDates.length === 1) {
-          const start = selectedDates[0];
-          minEndDatePlan = new Date(start);
-          minEndDatePlan.setDate(minEndDatePlan.getDate() + hotel_settings.min_booking_date);
-          // redraw to trigger onDayCreate
+          minEndDatePlan = (0,_flatpickr_locale_utils_js__WEBPACK_IMPORTED_MODULE_4__.getMinEndDateFromStartDate)(selectedDates[0], (0,_flatpickr_locale_utils_js__WEBPACK_IMPORTED_MODULE_4__.getMinBookingDays)(hotel_settings.min_booking_date));
+          instance.redraw();
+        } else {
+          minEndDatePlan = null;
           instance.redraw();
         }
         setCalendarDatePrice(instance, roomPricing);
@@ -3282,7 +7676,7 @@ const calendarPricing = () => {
           year = instance.currentYear;
         fetchAndSetCalendarDatePrice(instance, roomId, month, year);
       }
-    });
+    }));
   }
 };
 const fetchAndSetCalendarDatePrice = (calendarInstance, roomId, month, year) => {
@@ -3301,12 +7695,12 @@ const fetchAndSetCalendarDatePrice = (calendarInstance, roomId, month, year) => 
       throw new Error(res.message);
     }
     const data = res.data;
-    roomPricing = data.pricing;
+    roomPricing = indexRoomPricingByDate(data.pricing);
     setCalendarDatePrice(calendarInstance, roomPricing);
     if (undefined !== roomCalendarPricing) {
       elBtnsCalendarPricing.style.display = 'block';
     }
-  }).catch(err => console.log(err)).finally(() => {
+  }).catch(err => console.error(err)).finally(() => {
     if (undefined !== roomCalendarPricing) {
       hideCalendarOverlay(calendarInstance);
     }
@@ -3326,98 +7720,41 @@ const hideCalendarOverlay = calendarInstance => {
   let overlay = calendar.querySelector('.wphb-single-room-loading-overlay');
   if (overlay) overlay.remove();
 };
+const htmlDecodeElement = document.createElement('textarea');
+const getPricingDateKey = dateValue => {
+  if (!dateValue) {
+    return '';
+  }
+  if (dateValue instanceof Date && !Number.isNaN(dateValue.getTime())) {
+    const year = dateValue.getFullYear();
+    const month = String(dateValue.getMonth() + 1).padStart(2, '0');
+    const day = String(dateValue.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+  return String(dateValue).slice(0, 10);
+};
+const indexRoomPricingByDate = (pricing = []) => (Array.isArray(pricing) ? pricing : []).reduce((acc, priceItem) => {
+  const pricingDateKey = getPricingDateKey(priceItem?.date);
+  if (pricingDateKey) {
+    acc[pricingDateKey] = priceItem;
+  }
+  return acc;
+}, {});
 const setCalendarDatePrice = (calendarInstance, pricing) => {
   const dayCells = calendarInstance.calendarContainer.querySelectorAll('.flatpickr-day:not(.hidden)');
-  dayCells.forEach((dayElem, idx) => {
+  dayCells.forEach(dayElem => {
     const dateObj = dayElem.dateObj;
-    // Skip if dateObj is missing
-    if (!dateObj || undefined === pricing[idx]) {
+    const pricingDateKey = getPricingDateKey(dateObj);
+    const pricingItem = pricing?.[pricingDateKey];
+    if (!dateObj || !pricingItem) {
       return;
     }
-    dayElem.setAttribute('data-title', decodeHtmlEntity(pricing[idx].price_html));
+    dayElem.setAttribute('data-title', decodeHtmlEntity(pricingItem.price_html));
   });
 };
 const decodeHtmlEntity = str => {
-  return new DOMParser().parseFromString(str, 'text/html').body.textContent;
-};
-const wphbRoomCheckDates = formCheckDate => {
-  const elBtnCheck = formCheckDate.querySelector('button[type=submit]');
-  let elLoading = formCheckDate.querySelector('.wphb-icon');
-  if (!elLoading) {
-    elBtnCheck.insertAdjacentHTML('afterbegin', '<span class="dashicons dashicons-update hide wphb-icon"></span>');
-    elLoading = elBtnCheck.querySelector('.wphb-icon');
-  }
-  elLoading.classList.remove('hide');
-  elLoading.classList.toggle('loading');
-  elBtnCheck.setAttribute('disabled', 'disabled');
-  const showErrors = message => {
-    const elMesErrors = formCheckDate.querySelectorAll('.hotel_booking_room_errors');
-    if (elMesErrors) {
-      elMesErrors.forEach(el => {
-        el.remove();
-      });
-    }
-    formCheckDate.querySelector('.hb-booking-room-form-head').insertAdjacentHTML('beforeend', `<div class="hotel_booking_room_errors">${message}</div>`);
-    setTimeout(() => {
-      formCheckDate.querySelector('.hotel_booking_room_errors').remove();
-    }, 2500);
-  };
-
-  // Send to sever
-  const option = handleBookingFormData(formCheckDate);
-  fetch(hotel_settings.ajax, option).then(response => response.json()).then(res => {
-    const {
-      status,
-      message,
-      data
-    } = res;
-    if (status === 'error') {
-      showErrors(message);
-      return;
-    }
-    if (!elAddToCart) {
-      elHotelBookingRoom.insertAdjacentHTML('beforeend', data.html_extra);
-    }
-    elAddToCart = elHotelBookingRoom.querySelector('.wpdb-room-tmpl-add-to-cart');
-    if (!elAddToCart) {
-      return;
-    }
-
-    // set list qty for room
-    const elNumRoom = elAddToCart.querySelector('input[name=hb-num-of-rooms]');
-    if (elNumRoom) {
-      const elQtyMax = elAddToCart.querySelector('.qty-max');
-      if (elQtyMax) {
-        elQtyMax.textContent = data.qty;
-      }
-      // for ( let i = 1; i <= parseInt( data.qty ); i++ ) {
-      // 	elNumRoom.insertAdjacentHTML( 'beforeend', '<option value="' + i + '">' + i + '</option>' );
-      // }
-      elNumRoom.setAttribute('max', data.qty);
-    }
-
-    // Set dates checked
-    const elDatesChecked = elAddToCart.querySelector('.wphb-room-dates-checked');
-    if (elDatesChecked) {
-      elDatesChecked.innerHTML = data.dates_booked;
-    } else {
-      formCheckDate.insertAdjacentHTML('beforebegin', data.dates_booked);
-    }
-    if (elTmplDateAvailable) {
-      elTmplDateAvailable.style.display = 'none';
-    } else {
-      formCheckDate.style.display = 'none';
-    }
-    elAddToCart.style.display = 'block';
-  }).catch(error => {
-    showErrors(error);
-  }).finally(() => {
-    elBtnCheck.removeAttribute('disabled');
-    if (elLoading) {
-      elLoading.classList.add('hide');
-      elLoading.classList.toggle('loading');
-    }
-  });
+  htmlDecodeElement.innerHTML = str;
+  return htmlDecodeElement.value;
 };
 const wphbRoomAddToCart = formAddToCart => {
   const elBtnSubmit = formAddToCart.querySelector('button[type=submit]');
@@ -3436,7 +7773,13 @@ const wphbRoomAddToCart = formAddToCart => {
   };
 
   // Send to sever
-  const option = handleBookingFormData(formAddToCart);
+  let option;
+  try {
+    option = handleBookingFormData(formAddToCart);
+  } catch (error) {
+    showErrors(error.message || String(error));
+    return;
+  }
   elBtnSubmit.setAttribute('disabled', 'disabled');
   elLoading.classList.remove('hide');
   elLoading.classList.toggle('loading');
@@ -3460,6 +7803,10 @@ const wphbRoomAddToCart = formAddToCart => {
   });
 };
 const handleBookingFormData = form => {
+  const normalizedDates = validateAndNormalizeBookingDateRange(form);
+  if (normalizedDates.error) {
+    throw new Error(normalizedDates.error);
+  }
   let dataSend = {};
   const data = new FormData(form);
   for (const pair of data.entries()) {
@@ -3469,6 +7816,8 @@ const handleBookingFormData = form => {
 
     dataSend[key] = value;
   }
+  dataSend.check_in_date = normalizedDates.checkInDate;
+  dataSend.check_out_date = normalizedDates.checkOutDate;
   const dataSendFrom = new FormData();
   Object.entries(dataSend).forEach(([key, value]) => {
     dataSendFrom.append(key, value);
@@ -3489,7 +7838,13 @@ const handleBookingFormData = form => {
 };
 //calculate room price without tax
 const calculateBookingPrice = elForm => {
-  const option = handleBookingFormData(elForm);
+  let option;
+  try {
+    option = handleBookingFormData(elForm);
+  } catch (error) {
+    alert(error.message || String(error));
+    return;
+  }
   elForm.querySelector('.wphb-single-room-loading-overlay').classList.remove('hidden');
   fetch(`${hotel_settings.wphb_rest_url}wphb/v1/rooms/calculate-booking-price`, option).then(response => response.json()).then(res => {
     const {
@@ -3504,13 +7859,21 @@ const calculateBookingPrice = elForm => {
     elForm.querySelector('[name="hb-num-of-rooms"]').setAttribute('max', data.available_qty);
     elForm.querySelector('.wphb-max-qty .qty-max').innerHTML = data.available_qty;
     elForm.querySelector('.hb-total-price-value').innerHTML = data.amount_html;
-  }).catch(error => {}).finally(() => {
+  }).catch(error => {
+    console.error(error);
+  }).finally(() => {
     elForm.querySelector('.wphb-single-room-loading-overlay').classList.add('hidden');
   });
 };
 const getRoomBookingPriceDetails = button => {
   let form = button.closest('form');
-  const option = handleBookingFormData(form);
+  let option;
+  try {
+    option = handleBookingFormData(form);
+  } catch (error) {
+    alert(error.message || String(error));
+    return;
+  }
   const iconLoading = button.querySelector('.dashicons.dashicons-update.hide.wphb-icon');
   iconLoading.classList.toggle('hide');
   iconLoading.classList.toggle('loading');
@@ -3521,11 +7884,13 @@ const getRoomBookingPriceDetails = button => {
       data
     } = res;
     if (status === 'error') {
-      console.log(message);
+      console.error(message);
       return;
     }
     button.closest('.hb_view_price.hb-room-content').insertAdjacentHTML('beforeend', data.price_html);
-  }).catch(error => {}).finally(() => {
+  }).catch(error => {
+    console.error(error);
+  }).finally(() => {
     iconLoading.classList.toggle('hide');
     iconLoading.classList.toggle('loading');
   });
@@ -3537,7 +7902,6 @@ document.addEventListener('submit', function (e) {
   if (target.name === 'hb-search-single-room') {
     e.preventDefault();
     wphbRoomAddToCart(target);
-    // wphbRoomCheckDates( target );
   }
   if (target.name === 'hb-search-results') {
     e.preventDefault();
@@ -3568,7 +7932,7 @@ document.addEventListener('click', function (e) {
 
     // Init new modal
     if (!modalCheckDates) {
-      modalCheckDates = new (tingle_js__WEBPACK_IMPORTED_MODULE_1___default().modal)({
+      modalCheckDates = new (tingle_js__WEBPACK_IMPORTED_MODULE_2___default().modal)({
         onOpen() {
           elHotelBookingRoom.style.display = 'block';
         },
@@ -3597,12 +7961,12 @@ document.addEventListener('click', function (e) {
       iframe = `<iframe class="wphb-iframe-preview" src="${iframe}" 
 			width="100%" height="${windowHeight}px" frameborder="0" allowfullscreen></iframe>`;
     }
-    modalPreview = new (tingle_js__WEBPACK_IMPORTED_MODULE_1___default().modal)();
+    modalPreview = new (tingle_js__WEBPACK_IMPORTED_MODULE_2___default().modal)();
     modalPreview.setContent(iframe);
     modalPreview.open();
   } else if (target.classList.contains('hb-btn-cancel')) {
     if (undefined !== roomCalendarPricing) {
-      minEndDatePlan = false;
+      minEndDatePlan = null;
       roomCalendarPricing.clear();
     }
   } else if (target.classList.contains('hb-btn-apply')) {
@@ -3662,7 +8026,7 @@ document.addEventListener('DOMContentLoaded', function (e) {
     if (elTabContent) {
       return;
     }
-    _utils_js__WEBPACK_IMPORTED_MODULE_2__.listenElementViewed(elRoomCalendarPricing, () => {
+    _utils_js__WEBPACK_IMPORTED_MODULE_3__.listenElementViewed(elRoomCalendarPricing, () => {
       if (elRoomCalendarPricing.classList.contains('loaded')) {
         return;
       }
