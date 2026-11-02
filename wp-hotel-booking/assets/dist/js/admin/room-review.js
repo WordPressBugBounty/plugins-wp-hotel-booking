@@ -51,7 +51,7 @@ const hbReviewImages = () => {
   if (!mediaElNodes) {
     return;
   }
-  (0,delegated_events__WEBPACK_IMPORTED_MODULE_1__.on)('click', '.hb-gallery-add', function (event) {
+  ;(0,delegated_events__WEBPACK_IMPORTED_MODULE_1__.on)('click', '.hb-gallery-add', function (event) {
     event.preventDefault();
     const mediaElNode = this.closest('.hb-image-info');
     const hbUploader = wp.media({
@@ -130,7 +130,7 @@ const hbReviewImages = () => {
       }
     });
   }
-  (0,delegated_events__WEBPACK_IMPORTED_MODULE_1__.on)('click', '.hb-image-info .hb-gallery-remove', function (event) {
+  ;(0,delegated_events__WEBPACK_IMPORTED_MODULE_1__.on)('click', '.hb-image-info .hb-gallery-remove', function (event) {
     event.preventDefault();
     const imageInfo = this.closest('.hb-image-info');
     this.closest('.hb-gallery-preview').remove();
@@ -4211,47 +4211,24 @@ Sortable.mount(Remove, Revert);
 /******/ 	
 /************************************************************************/
 /******/ 	/* webpack/runtime/define property getters */
-/******/ 	(() => {
-/******/ 		// define getter/value functions for harmony exports
-/******/ 		__webpack_require__.d = (exports, definition) => {
-/******/ 			if(Array.isArray(definition)) {
-/******/ 				var i = 0;
-/******/ 				while(i < definition.length) {
-/******/ 					var key = definition[i++];
-/******/ 					var binding = definition[i++];
-/******/ 					if(!__webpack_require__.o(exports, key)) {
-/******/ 						if(binding === 0) {
-/******/ 							Object.defineProperty(exports, key, { enumerable: true, value: definition[i++] });
-/******/ 						} else {
-/******/ 							Object.defineProperty(exports, key, { enumerable: true, get: binding });
-/******/ 						}
-/******/ 					} else if(binding === 0) { i++; }
-/******/ 				}
-/******/ 			} else {
-/******/ 				for(var key in definition) {
-/******/ 					if(__webpack_require__.o(definition, key) && !__webpack_require__.o(exports, key)) {
-/******/ 						Object.defineProperty(exports, key, { enumerable: true, get: definition[key] });
-/******/ 					}
-/******/ 				}
+/******/ 	// define getter/value functions for harmony exports
+/******/ 	__webpack_require__.d = (exports, definition) => {
+/******/ 		for(var key in definition) {
+/******/ 			if(__webpack_require__.o(definition, key) && !__webpack_require__.o(exports, key)) {
+/******/ 				Object.defineProperty(exports, key, { enumerable: true, get: definition[key] });
 /******/ 			}
-/******/ 		};
-/******/ 	})();
+/******/ 		}
+/******/ 	};
 /******/ 	
 /******/ 	/* webpack/runtime/hasOwnProperty shorthand */
-/******/ 	(() => {
-/******/ 		__webpack_require__.o = (obj, prop) => (Object.hasOwn(obj, prop))
-/******/ 	})();
+/******/ 	__webpack_require__.o = (obj, prop) => (Object.hasOwn(obj, prop));
 /******/ 	
 /******/ 	/* webpack/runtime/make namespace object */
-/******/ 	(() => {
-/******/ 		// define __esModule on exports
-/******/ 		__webpack_require__.r = (exports) => {
-/******/ 			if(Symbol.toStringTag) {
-/******/ 				Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-/******/ 			}
-/******/ 			Object.defineProperty(exports, '__esModule', { value: true });
-/******/ 		};
-/******/ 	})();
+/******/ 	// define __esModule on exports
+/******/ 	__webpack_require__.r = (exports) => {
+/******/ 		Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+/******/ 		Object.defineProperty(exports, '__esModule', { value: true });
+/******/ 	};
 /******/ 	
 /************************************************************************/
 let __webpack_exports__ = {};
@@ -4265,12 +4242,10 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _advanced_review__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./advanced-review */ "./assets/js/admin/room-review/advanced-review.js");
 
 
-
-addEventListener("DOMContentLoaded", (event) => {
-    (0,_images__WEBPACK_IMPORTED_MODULE_0__["default"])();
-    (0,_advanced_review__WEBPACK_IMPORTED_MODULE_1__["default"])();
+addEventListener("DOMContentLoaded", event => {
+  (0,_images__WEBPACK_IMPORTED_MODULE_0__["default"])();
+  (0,_advanced_review__WEBPACK_IMPORTED_MODULE_1__["default"])();
 });
-
 })();
 
 /******/ })()

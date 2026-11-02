@@ -114,6 +114,10 @@ if ( ! class_exists( 'HB_Coupon' ) ) {
 		 * @return float|int
 		 */
 		public function apply_sub_total_discount( $sub_total ) {
+			if ( empty( $this->post->ID ) || (int) WPHB_Cart::instance()->coupon !== (int) $this->post->ID ) {
+				return $sub_total;
+			}
+
 			$discount = $this->get_discount_value( $sub_total );
 
 			return $discount < $sub_total ? $sub_total - $discount : 0;
@@ -164,6 +168,52 @@ if ( ! class_exists( 'HB_Coupon' ) ) {
 		}
 
 		/**
+		 * Track and update coupon usage count when booking status changes.
+		 * Supports both frontend gateway webhooks and admin status changes.
+		 * Uses idempotency flag (_hb_coupon_usage_recorded) to prevent double counting.
+		 *
+		 * @param int    $booking_id
+		 * @param string $old_status
+		 * @param string $new_status
+		 */
+		public static function handle_booking_status_changed( $booking_id, $old_status, $new_status ) {
+			if ( empty( $booking_id ) ) {
+				return;
+			}
+
+			$coupon_id = get_post_meta( $booking_id, '_hb_coupon_id', true );
+			if ( empty( $coupon_id ) ) {
+				return;
+			}
+
+			$clean_old = str_replace( 'hb-', '', (string) $old_status );
+			$clean_new = str_replace( 'hb-', '', (string) $new_status );
+
+			if ( $clean_old === $clean_new ) {
+				return;
+			}
+
+			$completed_statuses = array( 'completed', 'processing' );
+			$cancelled_statuses = array( 'cancelled', 'refunded' );
+
+			$is_recorded = (bool) get_post_meta( $booking_id, '_hb_coupon_usage_recorded', true );
+			$usage_count = (int) get_post_meta( $coupon_id, '_hb_usage_count', true );
+
+			// Moving into paid/completed status: record usage if not already recorded
+			if ( in_array( $clean_new, $completed_statuses, true ) && ! $is_recorded ) {
+				$usage_count++;
+				update_post_meta( $coupon_id, '_hb_usage_count', $usage_count );
+				update_post_meta( $booking_id, '_hb_coupon_usage_recorded', 1 );
+			}
+			// Moving into cancelled/refunded status: reverse usage if previously recorded
+			elseif ( in_array( $clean_new, $cancelled_statuses, true ) && $is_recorded ) {
+				$usage_count = max( 0, $usage_count - 1 );
+				update_post_meta( $coupon_id, '_hb_usage_count', $usage_count );
+				delete_post_meta( $booking_id, '_hb_coupon_usage_recorded' );
+			}
+		}
+
+		/**
 		 * @param null $coupon
 		 *
 		 * @return HB_Coupon|mixed
@@ -189,4 +239,7 @@ if ( ! class_exists( 'HB_Coupon' ) ) {
 			return self::$_instance[ $id ] = new self( $post );
 		}
 	}
+
+	add_action( 'hb_booking_status_changed', array( 'HB_Coupon', 'handle_booking_status_changed' ), 10, 3 );
 }
+

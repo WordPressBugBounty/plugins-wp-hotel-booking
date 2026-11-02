@@ -82,25 +82,14 @@ class WPHB_Cart {
 			case 'cart_contents':
 				$return = $this->get_cart_contents();
 				break;
-
 			case 'cart_total_include_tax':
 				$return = $this->cart_total_include_tax();
 				break;
-
 			case 'cart_total_exclude_tax':
 				$return = $this->cart_total_exclude_tax();
 				break;
-
 			case 'cart_items_count':
 				$return = count( $this->get_cart_contents() );
-				break;
-
-			// old
-			case 'total_rooms':
-				$return = $this->get_total_rooms();
-				break;
-			case 'total_nights':
-				$return = $this->get_total_nights();
 				break;
 			case 'sub_total':
 				$return = $this->get_sub_total();
@@ -111,7 +100,13 @@ class WPHB_Cart {
 			case 'advance_payment':
 				$return = $this->get_advance_payment();
 				break;
-			// end old
+			case 'booking_sessions':
+				$return = $this->booking_sessions;
+				break;
+			case 'customer_sessions':
+				$return = $this->customer_sessions;
+				break;
+
 			default:
 				$return = apply_filters( 'hotel_booking_cart_get_magic', '', $key );
 				break;
@@ -201,7 +196,8 @@ class WPHB_Cart {
 	// load customer
 	function load_customer() {
 		// load customer session object
-		$session = (array) $this->customer_sessions->session;
+		$session      = (array) $this->customer_sessions->session;
+		$this->coupon = null;
 		if ( $this->customer_sessions && $this->customer_sessions->session ) {
 			if ( isset( $session['customer_id'] ) ) {
 				$this->customer_id = $session['customer_id'];
@@ -221,11 +217,10 @@ class WPHB_Cart {
 
 	// load booking
 	function load_booking() {
+		$this->booking_id = null;
 		// load customer session object
-		if ( $this->booking_sessions && $this->booking_sessions->session ) {
-			if ( isset( $this->booking_sessions->session->booking_id ) ) {
-				$this->booking_id = $this->booking_sessions->session->booking_id;
-			}
+		if ( $this->booking_sessions ) {
+			$this->booking_id = $this->booking_sessions->get( 'booking_id' );
 			$this->booking_id = apply_filters( 'hotel_booking_load_booking_from_session', $this->booking_id );
 		}
 	}
@@ -254,6 +249,13 @@ class WPHB_Cart {
 		$qty = is_numeric( $qty ) ? (int) $qty : 0;
 		if ( $qty < 0 ) {
 			return new WP_Error( 'hotel_booking_add_to_cart_error', __( 'Room quantity is invalid.', 'wp-hotel-booking' ) );
+		}
+
+		if ( ! empty( $params['check_in_date'] ) && ! empty( $params['check_out_date'] ) ) {
+			$min_nights_validation = hb_validate_minimum_booking_nights( $params['check_in_date'], $params['check_out_date'] );
+			if ( is_wp_error( $min_nights_validation ) ) {
+				return $min_nights_validation;
+			}
 		}
 
 		$cart_item_id = $this->generate_cart_id( $params );
@@ -442,11 +444,15 @@ class WPHB_Cart {
 
 		if ( $this->sessions ) {
 			// reset all sessions
-			$this->sessions = $this->sessions->remove();
+			$this->sessions->remove();
 		}
 
 		if ( $this->booking_sessions ) {
-			$this->booking_sessions = $this->booking_sessions->remove();
+			$this->booking_sessions->remove();
+		}
+
+		if ( $this->customer_sessions ) {
+			$this->customer_sessions->remove();
 		}
 
 		$this->set_customer( 'coupon', null );
@@ -454,6 +460,18 @@ class WPHB_Cart {
 		do_action( 'hotel_booking_empty_cart' );
 		// refresh cart contents
 		$this->refresh();
+	}
+
+	/**
+	 * Completely reset cart, customer, booking sessions and runtime state (e.g. on user logout).
+	 */
+	public function reset_all_sessions() {
+		$this->empty_cart();
+
+		$this->customer_id    = null;
+		$this->customer_email = null;
+		$this->coupon         = null;
+		$this->booking_id     = null;
 	}
 
 	// generate cart item id
@@ -502,7 +520,7 @@ class WPHB_Cart {
 
 	// set customer object
 	function set_customer( $name = null, $val = null ) {
-		if ( ! $name ) {
+		if ( ! $name || ! $this->customer_sessions ) {
 			return;
 		}
 		// set session cart
@@ -516,7 +534,7 @@ class WPHB_Cart {
 
 	// set customer object
 	function set_booking( $name = null, $val = null ) {
-		if ( ! $name || ! $val ) {
+		if ( ! $name || ! $val || ! $this->booking_sessions ) {
 			return;
 		}
 		// set session cart
@@ -555,11 +573,11 @@ class WPHB_Cart {
 
 		// refresh cart_items_count
 		$this->cart_items_count = count( $this->cart_contents );
-//
-//		// refresh customer
+
+		// refresh customer
 		$this->load_customer();
-//
-//		// refresh booking
+
+		// refresh booking
 		$this->load_booking();
 	}
 
@@ -685,24 +703,21 @@ class WPHB_Cart {
 
 				if ( $post_type == 'hb_room' ) {
 					if ( $enable ) {
-						if ( get_post_type( $cart_item->product_id ) != 'hb_room' ) {
-							$parent  = $this->get_cart_item( $cart_item->parent_id );
-							$room_id = $parent->product_id;
-						}
 						// check deposit type room
-						$deposit_type = get_post_meta( $room_id, '_hb_deposit_type', true );
+						$deposit_type   = get_post_meta( $room_id, '_hb_deposit_type', true );
+						$deposit_amount = max( 0, floatval( get_post_meta( $room_id, '_hb_deposit_amount', true ) ) );
 						switch ( $deposit_type ) {
 							case 'fixed':
-								$total += get_post_meta( $room_id, '_hb_deposit_amount', true );
+								$total += $deposit_amount;
 								break;
 							case 'percent':
-								$total += ( $cart_item->amount * get_post_meta( $room_id, '_hb_deposit_amount', true ) ) / 100;
+								$total += ( $cart_item->amount * $deposit_amount ) / 100;
 								break;
 							default:
 								break;
 						}
 					} else {
-						if ( ! empty( hb_get_advance_payment() ) && ( $advance_payment = hb_get_advance_payment() ) < 100 ) {
+						if ( ! empty( hb_get_advance_payment() ) && ( $advance_payment = floatval( hb_get_advance_payment() ) ) > 0 && $advance_payment <= 100 ) {
 							$total += $cart_item->amount * $advance_payment / 100;
 						}
 					}
@@ -710,7 +725,12 @@ class WPHB_Cart {
 			}
 		}
 
-		return $total;
+		$cart_total = max( 0, (float) $this->get_total() );
+		if ( $total > $cart_total ) {
+			$total = $cart_total;
+		}
+
+		return max( 0, $total );
 	}
 
 	// total > 0
@@ -766,16 +786,16 @@ class WPHB_Cart {
 				'_hb_method_title'            => $payment_method->title,
 				'_hb_method_id'               => $payment_method->method_id,
 				// customer
-				'_hb_customer_title'          => hb_get_request( 'title' ),
-				'_hb_customer_first_name'     => hb_get_request( 'first_name' ),
-				'_hb_customer_last_name'      => hb_get_request( 'last_name' ),
-				'_hb_customer_address'        => hb_get_request( 'address' ),
-				'_hb_customer_city'           => hb_get_request( 'city' ),
-				'_hb_customer_state'          => hb_get_request( 'state' ),
-				'_hb_customer_postal_code'    => hb_get_request( 'postal_code' ),
-				'_hb_customer_country'        => hb_get_request( 'country' ),
-				'_hb_customer_phone'          => hb_get_request( 'phone' ),
-				'_hb_customer_email'          => hb_get_request( 'email' ),
+				'_hb_customer_title'          => sanitize_text_field( wp_unslash( $_REQUEST['title'] ?? '' ) ),
+				'_hb_customer_first_name'     => sanitize_text_field( wp_unslash( $_REQUEST['first_name'] ?? '' ) ),
+				'_hb_customer_last_name'      => sanitize_text_field( wp_unslash( $_REQUEST['last_name'] ?? '' ) ),
+				'_hb_customer_address'        => sanitize_text_field( wp_unslash( $_REQUEST['address'] ?? '' ) ),
+				'_hb_customer_city'           => sanitize_text_field( wp_unslash( $_REQUEST['city'] ?? '' ) ),
+				'_hb_customer_state'          => sanitize_text_field( wp_unslash( $_REQUEST['state'] ?? '' ) ),
+				'_hb_customer_postal_code'    => sanitize_text_field( wp_unslash( $_REQUEST['postal_code'] ?? '' ) ),
+				'_hb_customer_country'        => sanitize_text_field( wp_unslash( $_REQUEST['country'] ?? '' ) ),
+				'_hb_customer_phone'          => sanitize_text_field( wp_unslash( $_REQUEST['phone'] ?? '' ) ),
+				'_hb_customer_email'          => sanitize_email( wp_unslash( $_REQUEST['email'] ?? '' ) ),
 			)
 		);
 
@@ -825,7 +845,8 @@ class WPHB_Cart {
 	 */
 	function hb_get_cart_total( $pre_paid = false ) {
 		if ( $pre_paid ) {
-			$total = $this->get_advance_payment();
+			$advance_payment = $this->get_advance_payment();
+			$total           = $advance_payment > 0 ? $advance_payment : $this->total;
 		} else {
 			$total = $this->total;
 		}
@@ -841,8 +862,4 @@ class WPHB_Cart {
 
 		return self::$instance[ $appfix ];
 	}
-}
-
-if ( ! is_admin() ) {
-	$GLOBALS['hb_cart'] = hb_get_cart();
 }

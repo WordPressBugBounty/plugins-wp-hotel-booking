@@ -22,6 +22,13 @@ class ComposerStaticInitcfcf572c2405fa9464a37cafe9f28b9b
 
     public static $classMap = array (
         'Composer\\InstalledVersions' => __DIR__ . '/..' . '/composer/InstalledVersions.php',
+        'WPHB\\Helpers\\Singleton' => __DIR__ . '/../..' . '/includes/Helpers/Singleton.php',
+        'WPHB\\Helpers\\Template' => __DIR__ . '/../..' . '/includes/Helpers/Template.php',
+        'WPHB\\TemplateHooks\\Admin\\AdminExternalLinkIconSetting' => __DIR__ . '/../..' . '/includes/TemplateHooks/Admin/AdminExternalLinkIconSetting.php',
+        'WPHB\\TemplateHooks\\ArchiveRoomTemplate' => __DIR__ . '/../..' . '/includes/TemplateHooks/ArchiveRoomTemplate.php',
+        'WPHB\\TemplateHooks\\CheckRoomsTemplate' => __DIR__ . '/../..' . '/includes/TemplateHooks/CheckRoomsTemplate.php',
+        'WPHB\\TemplateHooks\\SingleRoomExternalLinkTemplate' => __DIR__ . '/../..' . '/includes/TemplateHooks/SingleRoomExternalLinkTemplate.php',
+        'WPHB\\TemplateHooks\\SingleRoomTemplate' => __DIR__ . '/../..' . '/includes/TemplateHooks/SingleRoomTemplate.php',
     );
 
     public static function getInitializer(ClassLoader $loader)

@@ -148,7 +148,20 @@ abstract class WPHB_Admin_Setting_Page {
 					$option_value = isset( $_POST[ $id ] ) ? 1 : 0;
 					break;
 				case 'number':
-					$option_value = isset( $_POST[ $id ] ) ? floatval( $_POST[ $id ] ) : 0;
+					if ( isset( $_POST[ $id ] ) && $_POST[ $id ] !== '' ) {
+						$option_value = floatval( $_POST[ $id ] );
+						if ( isset( $setting['min'] ) && is_numeric( $setting['min'] ) && $option_value < floatval( $setting['min'] ) ) {
+							$option_value = floatval( $setting['min'] );
+						}
+						if ( isset( $setting['max'] ) && is_numeric( $setting['max'] ) && $option_value > floatval( $setting['max'] ) ) {
+							$option_value = floatval( $setting['max'] );
+						}
+					} else {
+						$option_value = isset( $setting['default'] ) && $setting['default'] !== '' ? floatval( $setting['default'] ) : 0;
+						if ( isset( $setting['min'] ) && is_numeric( $setting['min'] ) && $option_value < floatval( $setting['min'] ) ) {
+							$option_value = floatval( $setting['min'] );
+						}
+					}
 					break;
 				case 'text':
 					$option_value = isset( $_POST[ $id ] ) ? sanitize_text_field( $_POST[ $id ] ) : $default;
@@ -162,9 +175,23 @@ abstract class WPHB_Admin_Setting_Page {
 					WPHB_Settings::instance()->set( $id . '_width', $option_width );
 					WPHB_Settings::instance()->set( $id . '_height', $option_height );
 					break;
+				case 'select':
+				case 'multiselect':
+				case 'select_page':
+					if ( isset( $_POST[ $id ] ) ) {
+						$option_value = WPHB_Helpers::sanitize_params_submitted( $_POST[ $id ] );
+					} else {
+						$option_value = ( $type === 'multiselect' || ( isset( $setting['type'] ) && $setting['type'] === 'multiselect' ) ) ? array() : ( isset( $setting['default'] ) ? $setting['default'] : '' );
+					}
+					$option_value = apply_filters( "wphb_admin_setting_save/{$type}", $option_value, $id, $setting );
+					break;
+				case 'radio':
+					$option_value = isset( $_POST[ $id ] ) ? sanitize_text_field( $_POST[ $id ] ) : ( isset( $setting['default'] ) ? $setting['default'] : '' );
+					$option_value = apply_filters( "wphb_admin_setting_save/{$type}", $option_value, $id, $setting );
+					break;
 				default:
 					if ( ! isset( $_POST[ $id ] ) ) {
-						break;
+						continue 2;
 					}
 
 					$option_value = $_POST[ $id ];

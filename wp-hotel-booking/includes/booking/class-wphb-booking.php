@@ -125,7 +125,7 @@ class WPHB_Booking {
 
 		$this->sub_total = $wpdb->get_var( $query );
 		if ( $with_coupon ) {
-			$this->sub_total = $this->sub_total - $this->coupon_value;
+			$this->sub_total = max( 0, $this->sub_total - $this->coupon_value );
 		}
 
 		return $this->sub_total;
@@ -155,7 +155,7 @@ class WPHB_Booking {
 		if ( $with_coupon ) {
 			$subtotal_without_coupon = $this->sub_total( false );
 			if ( $subtotal_without_coupon > 0 ) {
-				$this->tax_total = ( ( $subtotal_without_coupon - $this->coupon_value ) * $this->tax_total ) / $subtotal_without_coupon;
+				$this->tax_total = ( max( 0, $subtotal_without_coupon - $this->coupon_value ) * $this->tax_total ) / $subtotal_without_coupon;
 			}
 		}
 
@@ -181,11 +181,16 @@ class WPHB_Booking {
 	 * @return mixed
 	 */
 	function update( $order_items = array() ) {
-		$post_data = get_object_vars( $this->post );
+		$post_data = array_filter(
+			get_object_vars( $this->post ),
+			function ( $val ) {
+				return ! is_null( $val );
+			}
+		);
 		// ensure the post_type is correct
 		$post_data['post_type']             = 'hb_booking';
-		$post_data['post_content_filtered'] = $post_data['post_content'];
-		$post_data['post_excerpt']          = $post_data['post_content'];
+		$post_data['post_content_filtered'] = $post_data['post_content'] ?? '';
+		$post_data['post_excerpt']          = $post_data['post_content'] ?? '';
 		if ( $this->post->ID ) {
 			$booking_id = wp_update_post( $post_data );
 		} else {
@@ -274,7 +279,7 @@ class WPHB_Booking {
 			$settings         = WPHB_Settings::instance();
 			$reservation_hold = $settings->get( 'reservation_hold', 'completed' );
 
-			if ( $reservation_hold === $new_status ) {
+			if ( trim( (string) $reservation_hold ) === $new_status ) {
 				$payment_complete_date = get_post_meta( $this->post->ID, '_hb_booking_payment_completed', true );
 				if ( ! $payment_complete_date ) {
 					add_post_meta( $this->post->ID, '_hb_booking_payment_completed', current_time( 'mysql' ) );

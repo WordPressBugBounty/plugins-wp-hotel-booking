@@ -7,4 +7,11 @@ $baseDir = dirname($vendorDir);
 
 return array(
     'Composer\\InstalledVersions' => $vendorDir . '/composer/InstalledVersions.php',
+    'WPHB\\Helpers\\Singleton' => $baseDir . '/includes/Helpers/Singleton.php',
+    'WPHB\\Helpers\\Template' => $baseDir . '/includes/Helpers/Template.php',
+    'WPHB\\TemplateHooks\\Admin\\AdminExternalLinkIconSetting' => $baseDir . '/includes/TemplateHooks/Admin/AdminExternalLinkIconSetting.php',
+    'WPHB\\TemplateHooks\\ArchiveRoomTemplate' => $baseDir . '/includes/TemplateHooks/ArchiveRoomTemplate.php',
+    'WPHB\\TemplateHooks\\CheckRoomsTemplate' => $baseDir . '/includes/TemplateHooks/CheckRoomsTemplate.php',
+    'WPHB\\TemplateHooks\\SingleRoomExternalLinkTemplate' => $baseDir . '/includes/TemplateHooks/SingleRoomExternalLinkTemplate.php',
+    'WPHB\\TemplateHooks\\SingleRoomTemplate' => $baseDir . '/includes/TemplateHooks/SingleRoomTemplate.php',
 );

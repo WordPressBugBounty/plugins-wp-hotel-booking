@@ -156,7 +156,7 @@ if ( $booking_id && get_post_type( $booking_id ) == 'hb_booking' ) {
 					$advance_settings = $hb_settings->get( 'advance_payment', 50 );
 				}
 
-				if ( floatval( hb_booking_total( $booking->id ) ) !== floatval( $advance_payment ) ) {
+				if ( floatval( $advance_payment ) > 0 && floatval( hb_booking_total( $booking->id ) ) !== floatval( $advance_payment ) ) {
 					?>
 					<tr>
 						<td colspan="6"><?php esc_html_e( 'Advance Payment', 'wp-hotel-booking' ); ?></td>
@@ -234,7 +234,7 @@ if ( $booking_id && get_post_type( $booking_id ) == 'hb_booking' ) {
 
 			<div class="booking-notes">
 				<label for="_hb_customer_notes"><?php esc_html_e( 'Booking Notes:', 'wp-hotel-booking' ); ?></label>
-				<?php echo esc_html( $booking->post->post_content ); ?>
+				<?php echo nl2br( esc_html( $booking->post->post_content ) ); ?>
 			</div>
 
 			<?php

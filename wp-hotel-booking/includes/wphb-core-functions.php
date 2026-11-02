@@ -91,7 +91,7 @@ if ( ! function_exists( 'hotel_booking_get_room_available' ) ) {
 			$qty = $room->get_num_of_rooms();
 			// Check the dates room booked is available
 			foreach ( $room_available_date as $date => $qty_available ) {
-				if ( $date > $check_in_date_timestamp && $date <= $check_out_date_timestamp ) {
+				if ( $date >= $check_in_date_timestamp && $date < $check_out_date_timestamp ) {
 					if ( $qty_available <= 0 ) {
 						throw new Exception( __( 'This room is not available.', 'wp-hotel-booking' ) );
 					}
@@ -100,24 +100,28 @@ if ( ! function_exists( 'hotel_booking_get_room_available' ) ) {
 				}
 			}
 
-			$blocked_id = get_post_meta( $room_id, 'hb_blocked_id', true );
-			if ( ! empty( $blocked_id ) ) {
-				$dates_timestamp_blocked = get_post_meta( $blocked_id, 'hb_blocked_time', false );
-				if ( ! empty( $dates_timestamp_blocked ) ) {
-					$dates_str_blocked = [];
-					foreach ( $dates_timestamp_blocked as $date_timestamp_blocked ) {
-						$dates_str_blocked[] = gmdate( WPHB_Datetime::$format, $date_timestamp_blocked );
+			$all_blocked_timestamps = function_exists( 'hb_get_room_blocked_dates' ) ? hb_get_room_blocked_dates( $room_id ) : array();
+			if ( empty( $all_blocked_timestamps ) ) {
+				$blocked_id = get_post_meta( $room_id, 'hb_blocked_id', true );
+				if ( ! empty( $blocked_id ) ) {
+					$all_blocked_timestamps = get_post_meta( $blocked_id, 'hb_blocked_time', false );
+				}
+			}
+
+			if ( ! empty( $all_blocked_timestamps ) ) {
+				$dates_str_blocked = [];
+				foreach ( $all_blocked_timestamps as $date_timestamp_blocked ) {
+					$dates_str_blocked[] = gmdate( WPHB_Datetime::$format, (int) $date_timestamp_blocked );
+				}
+
+				$date_timestamp_check = $check_in_date_timestamp;
+				while ( $date_timestamp_check < $check_out_date_timestamp ) {
+					$date_check = gmdate( WPHB_Datetime::$format, $date_timestamp_check );
+					if ( in_array( $date_check, $dates_str_blocked, true ) ) {
+						throw new Exception( __( 'This room is not available!', 'wp-hotel-booking' ) );
 					}
 
-					$date_timestamp_check = $check_in_date_timestamp;
-					while ( $date_timestamp_check < $check_out_date_timestamp ) {
-						$date_check = gmdate( WPHB_Datetime::$format, $date_timestamp_check );
-						if ( in_array( $date_check, $dates_str_blocked ) ) {
-							throw new Exception( __( 'This room is not available!', 'wp-hotel-booking' ) );
-						}
-
-						$date_timestamp_check = strtotime( $date_check . ' +1 day' );
-					}
+					$date_timestamp_check += DAY_IN_SECONDS;
 				}
 			}
 
@@ -133,23 +137,34 @@ if ( ! function_exists( 'hotel_booking_get_room_available' ) ) {
 	}
 }
 
-/**
- * @param int $date_check_in_timestamp
- * @param int $date_check_out_timestamp
- *
- * @return string[]
- * @since 2.1.3
- * @version 1.0.0
- */
-function wphb_get_nights_book( $date_check_in_timestamp = 0, $date_check_out_timestamp = 0 ) {
-	$nights_book     = array();
-	$date_next_night = gmdate( WPHB_Datetime::$format, $date_check_in_timestamp );
-	while ( $date_check_in_timestamp < strtotime( $date_check_out_timestamp ) ) {
-		$nights_book[]   = $date_next_night;
-		$date_next_night = date( WPHB_Datetime::$format, strtotime( $date_next_night . ' +1 day' ) );
-	}
+if ( ! function_exists( 'wphb_get_nights_book' ) ) {
+	/**
+	 * Get an array of formatted date strings for each night between check-in and check-out.
+	 *
+	 * Note: Currently not used internally within the core plugin, but preserved for
+	 * backward compatibility in case external themes or third-party add-ons rely on it.
+	 *
+	 * Accepts either integer timestamps or parseable date strings.
+	 *
+	 * @param int|string $date_check_in_timestamp  Check-in timestamp or date string.
+	 * @param int|string $date_check_out_timestamp Check-out timestamp or date string.
+	 *
+	 * @return string[] Array of date strings formatted as WPHB_Datetime::$format.
+	 * @since 2.1.3
+	 * @version 1.0.1
+	 */
+	function wphb_get_nights_book( $date_check_in_timestamp = 0, $date_check_out_timestamp = 0 ) {
+		$nights_book  = array();
+		$check_in_ts  = is_numeric( $date_check_in_timestamp ) ? (int) $date_check_in_timestamp : strtotime( $date_check_in_timestamp );
+		$check_out_ts = is_numeric( $date_check_out_timestamp ) ? (int) $date_check_out_timestamp : strtotime( $date_check_out_timestamp );
 
-	return $nights_book;
+		while ( $check_in_ts < $check_out_ts ) {
+			$nights_book[] = gmdate( WPHB_Datetime::$format, $check_in_ts );
+			$check_in_ts  += DAY_IN_SECONDS;
+		}
+
+		return $nights_book;
+	}
 }
 
 // product class process
@@ -254,7 +269,8 @@ if ( ! function_exists( 'is_plugin_active' ) ) {
 }
 
 if ( is_multisite() ) {
-	if ( is_plugin_active( 'tp-hotel-booking/tp-hotel-booking.php' ) && ! get_site_option( 'wphb_notice_remove_hotel_booking' ) ) {
+	$tp_active = is_plugin_active( 'tp-hotel-booking/tp-hotel-booking.php' ) || ( function_exists( 'is_plugin_active_for_network' ) && is_plugin_active_for_network( 'tp-hotel-booking/tp-hotel-booking.php' ) );
+	if ( $tp_active && ! get_site_option( 'wphb_notice_remove_hotel_booking' ) ) {
 		add_action( 'network_admin_notices', 'hb_notice_remove_hotel_booking' );
 		add_action( 'admin_notices', 'hb_notice_remove_hotel_booking' );
 	}

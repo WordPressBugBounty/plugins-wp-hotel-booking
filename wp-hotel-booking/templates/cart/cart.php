@@ -133,23 +133,10 @@ if ( $cart->cart_items_count != 0 ) :
 
 									// Calculate extra rows for rowspan
 									?>
-									<tr class="hb-cart-item" data-cart-id="
-											<?php
-											echo esc_attr( $cart_id );
-											?>
-									">
+									<tr class="hb-cart-item" data-cart-id="<?php echo esc_attr( $cart_id ); ?>">
 										<!-- Remove Button -->
 										<td class="hb-col-remove">
-											<a href="javascript:void(0)" class="hb-cart-item-remove hb_remove_cart_item"
-												data-cart-id="
-											<?php
-											echo esc_attr( $cart_id );
-											?>
-												" title="
-											<?php
-											esc_attr_e( 'Remove this item', 'wp-hotel-booking' );
-											?>
-												">
+											<a href="javascript:void(0)" class="hb-cart-item-remove hb_remove_cart_item" data-cart-id="<?php echo esc_attr( $cart_id ); ?>" title="<?php esc_attr_e( 'Remove this item', 'wp-hotel-booking' ); ?>">
 												<span>&times;</span>
 											</a>
 										</td>
@@ -159,31 +146,15 @@ if ( $cart->cart_items_count != 0 ) :
 											<?php
 											if ( $room_image ) :
 												?>
-												<a href="
-															<?php
-															echo esc_url( get_permalink( $room->ID ) );
-															?>
-												" class="hb-room-thumb">
-													<img src="
-															<?php
-															echo esc_url( $room_image );
-															?>
-													" alt="
-															<?php
-															echo esc_attr( $room->name );
-															?>
-													">
+												<a href="<?php echo esc_url( get_permalink( $room->ID ) ); ?>" class="hb-room-thumb">
+													<img src="<?php echo esc_url( $room_image ); ?>" alt="<?php echo esc_attr( $room->name ); ?>">
 												</a>
 												<?php
 											endif;
 											?>
 											<div class="hb-room-details">
 												<h6 class="hb-cart-item-title">
-													<a href="
-												<?php
-												echo esc_url( get_permalink( $room->ID ) );
-												?>
-													">
+													<a href="<?php echo esc_url( get_permalink( $room->ID ) ); ?>">
 														<?php
 														echo esc_html( $room->name );
 														?>
@@ -266,18 +237,27 @@ if ( $cart->cart_items_count != 0 ) :
 															foreach ( $cart_contents as $cart_item_id => $cart_item ) {
 																if ( isset( $cart_item->parent_id ) && $cart_item->parent_id === $cart_id ) {
 																	// extra class
-																	$extra            = HB_Extra_Package::instance(
-																		$cart_item->product_id
+																	$extra            = $cart_item->product_data ?? HB_Extra_Package::instance(
+																		$cart_item->product_id,
+																		array(
+																			'check_in_date'  => $check_in_date,
+																			'check_out_date' => $check_out_date,
+																			'quantity'       => $cart_item->quantity,
+																		)
 																	);
+																	$extra_total_price = isset( $cart_item->amount_exclude_tax ) ? $cart_item->amount_exclude_tax : $extra->amount_exclude_tax();
 																	$extra_packages[] = [
-																		'package_title' => $extra->title,
-																		'package_price' => hb_format_price(
+																		'package_title'    => $extra->title,
+																		'package_price'    => hb_format_price(
 																			$extra->amount_singular_exclude_tax
 																		),
-																		'package_id' => $extra->ID,
-																		'cart_id' => $cart_item_id,
+																		'package_id'       => $extra->ID,
+																		'cart_id'          => $cart_item_id,
 																		'package_quantity' => $cart_item->quantity,
-																		'required' => $extra->required,
+																		'package_total'    => hb_format_price( $extra_total_price ),
+																		'package_nights'   => ( isset( $extra->respondent ) && $extra->respondent === 'number' ) ? $nights_count : 1,
+																		'package_respondent' => $extra->respondent ?? '',
+																		'required'         => $extra->required,
 																	];
 																}
 															}
@@ -301,18 +281,6 @@ if ( $cart->cart_items_count != 0 ) :
 																	<?php
 																	foreach ( $extra_packages as $extra_package ) :
 																		?>
-																		<?php 
-																		$extra_id   = $extra_package['package_id'];
-																		$extra_info = hotel_booking_get_product_class( $extra_id,
-																			array(
-																				'product_id'     => $extra_id,
-																				'check_in_date'  => $check_in_date,
-																				'check_out_date' => $check_out_date,
-																				'quantity'       => $extra_package['package_quantity'],
-																			)
-																		);
-																		$extra_price = $extra_info ? $extra_info->get_price_package() : 0;
-																		 ?>
 																		<li class="hb-extra-package-item ">
 																			<span class="hb-extra-package-title">
 																				<?php
@@ -323,13 +291,17 @@ if ( $cart->cart_items_count != 0 ) :
 																			</span>
 																			<span class="hb-extra-package-meta">
 																				(
-																				<?php echo esc_html( $extra_price ); ?>
+																				<?php echo esc_html( $extra_package['package_price'] ); ?>
 																				×
 																				<?php
 																				echo esc_html(
 																					$extra_package['package_quantity']
 																				);
 																				?>
+																				<?php if ( ! empty( $extra_package['package_nights'] ) && $extra_package['package_nights'] > 1 ) : ?>
+																					× <?php echo esc_html( sprintf( _n( '%d night', '%d nights', $extra_package['package_nights'], 'wp-hotel-booking' ), $extra_package['package_nights'] ) ); ?>
+																				<?php endif; ?>:
+																				<?php echo esc_html( $extra_package['package_total'] ); ?>
 																				)
 																			</span>
 
@@ -349,15 +321,12 @@ if ( $cart->cart_items_count != 0 ) :
 										<!-- Price per night -->
 										<td class="hb-col-price">
 											<?php
-											echo hb_format_price(
-												$room->get_total(
-													$check_in_date,
-													$check_out_date,
-													1,
-													false
-												)
-											);
+											$price_per_night = $nights_count ? ( $room->get_total( $check_in_date, $check_out_date, 1, false ) / $nights_count ) : $room->get_total( $check_in_date, $check_out_date, 1, false );
 											?>
+											<span class="hb-price-amount"><?php echo hb_format_price( $price_per_night ); ?></span>
+											<?php if ( $nights_count > 1 ) : ?>
+												<span class="hb-price-nights">× <?php echo esc_html( sprintf( _n( '%d night', '%d nights', $nights_count, 'wp-hotel-booking' ), $nights_count ) ); ?></span>
+											<?php endif; ?>
 										</td>
 										<!-- Quantity -->
 										<td class="hb-col-quantity">
@@ -402,10 +371,7 @@ if ( $cart->cart_items_count != 0 ) :
 												if ( $cart_contents ) {
 													foreach ( $cart_contents as $cart_item ) {
 														if ( isset( $cart_item->parent_id ) && $cart_item->parent_id === $cart_id ) {
-															$extra                 = HB_Extra_Package::instance( $cart_item->product_id );
-															$extra_packages_total += floatval(
-																$extra->amount_singular_exclude_tax
-															) * intval( $cart_item->quantity );
+															$extra_packages_total += floatval( isset( $cart_item->amount_exclude_tax ) ? $cart_item->amount_exclude_tax : 0 );
 														}
 													}
 												}
@@ -420,7 +386,7 @@ if ( $cart->cart_items_count != 0 ) :
 													// Fixed deposit
 													$deposit_value = floatval( $deposit_amount );
 												}
-												$room_subtotal -= $deposit_value;
+												$room_subtotal = max( 0, $room_subtotal - $deposit_value );
 											}
 											?>
 											<span class="hb-price-amount">
@@ -498,7 +464,7 @@ if ( $cart->cart_items_count != 0 ) :
 								$cart_extra = $cart->get_extra_packages( $cart_id );
 								if ( $cart_extra && is_array( $cart_extra ) ) {
 									foreach ( $cart_extra as $extra ) {
-										$extra_total += isset( $extra->total ) ? $extra->total : 0;
+										$extra_total += isset( $extra->amount_exclude_tax ) ? floatval( $extra->amount_exclude_tax ) : 0;
 									}
 								}
 							}
@@ -619,11 +585,7 @@ if ( $cart->cart_items_count != 0 ) :
 						// Hook after cart totals (for payment options, terms, etc.)
 						do_action( 'hotel_booking_after_cart_total', $cart );
 						?>
-						<a href="
-						<?php
-						echo esc_url( hb_get_checkout_url() );
-						?>
-						" class="hb-btn hb-btn-checkout ">
+						<a href="<?php echo esc_url( hb_get_checkout_url() ); ?>" class="hb-btn hb-btn-checkout ">
 							<?php
 							esc_html_e( 'Proceed to Checkout', 'wp-hotel-booking' );
 							?>
@@ -652,11 +614,7 @@ else :
 			esc_html_e( 'Looks like you haven\'t added any rooms yet. Start exploring our rooms!', 'wp-hotel-booking' );
 			?>
 		</p>
-		<a href="
-		<?php
-		echo esc_url( get_post_type_archive_link( 'hb_room' ) );
-		?>
-		" class="hb-btn hb-btn-primary">
+		<a href="<?php echo esc_url( get_post_type_archive_link( 'hb_room' ) ); ?>" class="hb-btn hb-btn-primary">
 			<?php
 			esc_html_e( 'Browse Rooms', 'wp-hotel-booking' );
 			?>

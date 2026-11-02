@@ -145,7 +145,7 @@ if ( ! class_exists( 'WPHB_Admin_Setting_General' ) ) {
 						'title'   => __( 'Minimum booking nights', 'wp-hotel-booking' ),
 						'default' => 1,
 						'min'     => 1,
-						'step'    => 'any',
+						'step'    => 1,
 					),
 					array(
 						'type'    => 'number',
@@ -159,7 +159,8 @@ if ( ! class_exists( 'WPHB_Admin_Setting_General' ) ) {
 					array(
 						'type'    => 'checkbox',
 						'id'      => WPHB_Settings::instance()->get_field_name( 'price_including_tax' ),
-						'title'   => __( 'Price including tax', 'wp-hotel-booking' ),
+						'title'   => __( 'Display prices including tax', 'wp-hotel-booking' ),
+						'desc'    => __( 'Show room and extra service prices on frontend inclusive of tax. Uncheck to show prices exclusive of tax (tax will still be calculated in cart and checkout if Tax rates > 0).', 'wp-hotel-booking' ),
 						'default' => 1,
 					),
 					array(
@@ -171,7 +172,7 @@ if ( ! class_exists( 'WPHB_Admin_Setting_General' ) ) {
 							'max'        => __( 'Max', 'wp-hotel-booking' ),
 							'min_to_max' => __( 'Min to Max', 'wp-hotel-booking' ),
 						),
-						'default' => 1,
+						'default' => 'min',
 					),
 					array(
 						'type'    => 'number',
