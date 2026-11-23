@@ -98,6 +98,16 @@ class WPHB_Booking {
 		}
 	}
 
+	function __isset( $key ) {
+		if ( isset( $this->{$key} ) ) {
+			return true;
+		}
+
+		$val = $this->__get( $key );
+
+		return ( null !== $val && '' !== $val );
+	}
+
 	public function total( $with_coupon = true ) {
 		if ( ! $this->id ) {
 			return;
@@ -346,15 +356,16 @@ class WPHB_Booking {
 			// insert line_item
 			foreach ( $order_items as $k => $order_item ) {
 				if ( ! isset( $order_item['parent_id'] ) || ! $order_item['parent_id'] ) {
-					$product_id    = $order_item['product_id'];
-					$order_item_id = hb_add_order_item(
+					$product_id               = absint( $order_item['product_id'] ?? 0 );
+					$order_item['product_id'] = $product_id;
+					$order_item_id            = hb_add_order_item(
 						$this->id,
 						array(
 							'order_item_name' => get_the_title( $product_id ),
 							'order_item_type' => 'line_item',
 						)
 					);
-					$parents[ $k ] = $order_item_id;
+					$parents[ $k ]            = $order_item_id;
 
 					// add order items meta
 					foreach ( $order_item as $meta_key => $meta_value ) {
@@ -368,8 +379,9 @@ class WPHB_Booking {
 			// insert sub_item
 			foreach ( $order_items as $k => $order_item ) {
 				if ( isset( $order_item['parent_id'] ) && array_key_exists( $order_item['parent_id'], $parents ) ) {
-					$product_id    = $order_item['product_id'];
-					$order_item_id = hb_add_order_item(
+					$product_id               = absint( $order_item['product_id'] ?? 0 );
+					$order_item['product_id'] = $product_id;
+					$order_item_id            = hb_add_order_item(
 						$this->id,
 						array(
 							'order_item_name'   => get_the_title( $product_id ),

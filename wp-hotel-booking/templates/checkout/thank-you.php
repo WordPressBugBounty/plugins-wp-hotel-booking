@@ -6,7 +6,7 @@
  *
  * @author  ThimPress, leehld
  * @package WP-Hotel-Booking/Templates
- * @version 1.9.7.3
+ * @version 2.4.0
  */
 
 /**
@@ -86,7 +86,7 @@ if ( $booking_id && get_post_type( $booking_id ) == 'hb_booking' ) {
 							<?php printf( '%d', hb_count_nights_two_dates( hb_get_order_item_meta( $room->order_item_id, 'check_out_date', true ), hb_get_order_item_meta( $room->order_item_id, 'check_in_date', true ) ) ); ?>
 						</td>
 						<td>
-							<?php printf( '%s', hb_get_order_item_meta( $room->order_item_id, 'qty', true ) ); ?>
+							<?php echo esc_html( hb_get_order_item_meta( $room->order_item_id, 'qty', true ) ); ?>
 						</td>
 						<?php if ( $has_adult_qty ) : ?>
 						<td>
@@ -105,12 +105,12 @@ if ( $booking_id && get_post_type( $booking_id ) == 'hb_booking' ) {
 					<?php if ( $packages ) { ?>
 						<?php
 						foreach ( $packages as $package ) {
-							$extra_id = apply_filters( 'hotel-booking-order-extra-id', hb_get_order_item_meta( $package->order_item_id, 'product_id', true ) );
+							$extra_id = absint( apply_filters( 'hotel-booking-order-extra-id', hb_get_order_item_meta( $package->order_item_id, 'product_id', true ) ) );
 							$extra    = hotel_booking_get_product_class( $extra_id );
 							?>
-							<tr data-order-parent="<?php echo $extra_id; ?>">
+							<tr data-order-parent="<?php echo esc_attr( $extra_id ); ?>">
 								<td colspan="3">
-									<?php echo get_the_title( $extra_id ); ?>
+									<?php echo esc_html( get_the_title( $extra_id ) ); ?>
 								</td>
 								<td>
 									<?php echo esc_html( hb_get_order_item_meta( $package->order_item_id, 'qty', true ) ); ?>
